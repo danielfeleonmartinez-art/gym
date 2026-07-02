@@ -185,5 +185,22 @@ const Storage = {
 
     setSettings(settings) {
         return this.set('settings', settings);
+    },
+
+    // User Preferences (extracted from AI conversations)
+    getUserPreferences() {
+        return this.get('userPreferences') || {
+            trainingStyle: '',
+            focusMuscles: '',
+            avoidExercises: '',
+            schedule: '',
+            deadline: '',
+            preferredExercises: [],
+            notes: ''
+        };
+    },
+
+    setUserPreferences(prefs) {
+        return this.set('userPreferences', prefs);
     }
 };
