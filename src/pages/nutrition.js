@@ -1,6 +1,7 @@
 // ===== NUTRITION PAGE =====
 const NutritionPage = {
     activeTab: 'plan',
+    deficitLevel: localStorage.getItem('fitai_deficit_level') || 'moderado', // leve, moderado, agresivo, superavit_leve, superavit_moderado
 
     render() {
         const profile = Storage.getProfile();
@@ -33,9 +34,36 @@ const NutritionPage = {
         }), { calories: 0, protein: 0, carbs: 0, fats: 0 });
 
         return `
+            <!-- Deficit/Surplus Level Selector -->
+            <div class="card mb-3">
+                <h3 class="card-title mb-1">⚡ Nivel de ${(profile.goal || '').includes('perder') || (profile.goal || '').includes('definir') ? 'Déficit' : 'Superávit'}</h3>
+                <p class="text-muted mb-2" style="font-size: 0.75rem;">Elige qué tan agresivo quieres ser. La IA ajusta todo automáticamente.</p>
+                <div style="display: flex; gap: 0.4rem;">
+                    <button class="btn btn-sm ${this.deficitLevel === 'leve' ? 'btn-success' : 'btn-secondary'}" style="flex:1;" onclick="NutritionPage.setDeficitLevel('leve')">
+                        🐢 Leve
+                    </button>
+                    <button class="btn btn-sm ${this.deficitLevel === 'moderado' ? 'btn-primary' : 'btn-secondary'}" style="flex:1;" onclick="NutritionPage.setDeficitLevel('moderado')">
+                        ⚡ Moderado
+                    </button>
+                    <button class="btn btn-sm ${this.deficitLevel === 'agresivo' ? 'btn-danger' : 'btn-secondary'}" style="flex:1;" onclick="NutritionPage.setDeficitLevel('agresivo')">
+                        🔥 Agresivo
+                    </button>
+                </div>
+                ${macros.deficitInfo ? `
+                <div style="margin-top: 0.75rem; padding: 0.75rem; background: var(--bg-input); border-radius: 8px;">
+                    <p style="font-weight: 600; font-size: 0.85rem;">${macros.deficitInfo.name}</p>
+                    <p class="text-muted" style="font-size: 0.75rem; margin-top: 0.2rem;">${macros.deficitInfo.desc}</p>
+                    <div style="display: flex; gap: 1rem; margin-top: 0.5rem; font-size: 0.7rem;">
+                        <span style="color: var(--accent);">📉 ${macros.deficitInfo.rate}</span>
+                        <span style="color: var(--text-muted);">⏱️ ${macros.deficitInfo.duration}</span>
+                    </div>
+                </div>
+                ` : ''}
+            </div>
+
             <!-- Daily Target -->
             <div class="card mb-3" style="text-align: center; border-color: var(--primary);">
-                <p style="font-size: 0.8rem; color: var(--text-muted);">Objetivo diario</p>
+                <p style="font-size: 0.7rem; color: var(--text-muted);">TDEE: ${macros.tdee || '?'} kcal → Objetivo:</p>
                 <p style="font-size: 2.2rem; font-weight: 800; color: var(--primary);">${macros.calories}</p>
                 <p style="font-size: 0.85rem; color: var(--text-secondary);">kcal / día</p>
                 <p class="text-muted mt-1" style="font-size: 0.75rem;">Meta: ${profile.goal || 'mejorar composición corporal'}</p>
@@ -227,25 +255,83 @@ const NutritionPage = {
     // Helpers
     calculateMacros(profile) {
         const weight = profile.weight || 70;
+        const height = profile.height || 175;
+        const age = profile.age || 25;
+        const gender = profile.gender || 'hombre';
         const goal = profile.goal || 'ganar músculo';
-        let calories, protein, carbs, fats;
+        const level = this.deficitLevel;
+
+        // Calculate TDEE using Mifflin-St Jeor
+        let bmr;
+        if (gender === 'hombre') {
+            bmr = 10 * weight + 6.25 * height - 5 * age + 5;
+        } else {
+            bmr = 10 * weight + 6.25 * height - 5 * age - 161;
+        }
+        const tdee = Math.round(bmr * 1.55); // moderately active
+
+        // Apply deficit/surplus based on selection
+        let calories, protein, carbs, fats, deficitInfo;
 
         if (goal.includes('perder') || goal.includes('definir') || goal.includes('bajar')) {
-            calories = Math.round(weight * 26);
-            protein = Math.round(weight * 2.2);
-            fats = Math.round(weight * 0.9);
+            switch(level) {
+                case 'leve':
+                    calories = Math.round(tdee - 250);
+                    deficitInfo = { name: 'Déficit Leve', desc: '-250 kcal. Pérdida lenta pero sostenible. Preserva más músculo.', rate: '0.25-0.3 kg/semana', duration: 'Ideal para 16-20+ semanas' };
+                    break;
+                case 'moderado':
+                    calories = Math.round(tdee - 450);
+                    deficitInfo = { name: 'Déficit Moderado', desc: '-450 kcal. Balance entre velocidad y preservación muscular.', rate: '0.4-0.6 kg/semana', duration: 'Ideal para 10-16 semanas' };
+                    break;
+                case 'agresivo':
+                    calories = Math.round(tdee - 700);
+                    deficitInfo = { name: 'Déficit Agresivo', desc: '-700 kcal. Rápido pero más riesgo de perder músculo. Solo corto plazo.', rate: '0.7-1 kg/semana', duration: 'MÁXIMO 6-8 semanas, luego sube a moderado' };
+                    break;
+                default:
+                    calories = Math.round(tdee - 450);
+                    deficitInfo = { name: 'Déficit Moderado', desc: '-450 kcal', rate: '0.5 kg/semana', duration: '10-16 semanas' };
+            }
+            protein = Math.round(weight * (level === 'agresivo' ? 2.4 : level === 'moderado' ? 2.2 : 2.0));
+            fats = Math.round(weight * (level === 'agresivo' ? 0.7 : 0.9));
         } else if (goal.includes('ganar') || goal.includes('volumen') || goal.includes('músculo')) {
-            calories = Math.round(weight * 35);
+            switch(level) {
+                case 'superavit_leve':
+                case 'leve':
+                    calories = Math.round(tdee + 200);
+                    deficitInfo = { name: 'Superávit Lean', desc: '+200 kcal. Ganancia lenta minimizando grasa.', rate: '+0.2-0.3 kg/semana', duration: 'Ideal para 16-24 semanas' };
+                    break;
+                case 'superavit_moderado':
+                case 'moderado':
+                    calories = Math.round(tdee + 350);
+                    deficitInfo = { name: 'Superávit Moderado', desc: '+350 kcal. Buen balance músculo/grasa.', rate: '+0.35-0.5 kg/semana', duration: 'Ideal para 12-20 semanas' };
+                    break;
+                case 'agresivo':
+                    calories = Math.round(tdee + 500);
+                    deficitInfo = { name: 'Superávit Agresivo', desc: '+500 kcal. Máxima ganancia pero algo de grasa extra.', rate: '+0.5-0.75 kg/semana', duration: 'Para ectomorfos o principiantes 12-16 semanas' };
+                    break;
+                default:
+                    calories = Math.round(tdee + 300);
+                    deficitInfo = { name: 'Superávit Moderado', desc: '+300 kcal', rate: '+0.35 kg/semana', duration: '12-20 semanas' };
+            }
             protein = Math.round(weight * 2);
             fats = Math.round(weight * 1);
         } else {
-            calories = Math.round(weight * 30);
-            protein = Math.round(weight * 1.8);
+            calories = tdee;
+            protein = Math.round(weight * 2);
             fats = Math.round(weight * 1);
+            deficitInfo = { name: 'Mantenimiento', desc: 'Calorías al nivel de gasto. Recomposición corporal.', rate: 'Peso estable', duration: 'Indefinido' };
         }
-        carbs = Math.round((calories - (protein * 4) - (fats * 9)) / 4);
 
-        return { calories, protein, carbs, fats };
+        carbs = Math.round((calories - (protein * 4) - (fats * 9)) / 4);
+        if (carbs < 50) carbs = 50; // minimum carbs
+
+        return { calories, protein, carbs, fats, tdee, deficitInfo };
+    },
+
+    setDeficitLevel(level) {
+        this.deficitLevel = level;
+        localStorage.setItem('fitai_deficit_level', level);
+        App.renderCurrentPage();
     },
 
     generateMealPlan(macros, profile) {
