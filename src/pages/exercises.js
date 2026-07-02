@@ -3,6 +3,7 @@ const ExercisesPage = {
     filter: 'all',
     searchQuery: '',
     selectedExercise: null,
+    showBodyMap: false,
 
     render() {
         if (this.selectedExercise) {
@@ -13,39 +14,51 @@ const ExercisesPage = {
         let filtered = EXERCISES_DB;
 
         if (this.filter !== 'all') {
-            filtered = filtered.filter(e => e.muscle === this.filter);
+            filtered = filtered.filter(e => e.muscle === this.filter || (e.secondary && e.secondary.includes(this.filter)));
         }
         if (this.searchQuery) {
             const q = this.searchQuery.toLowerCase();
             filtered = filtered.filter(e => 
                 e.name.toLowerCase().includes(q) || 
                 e.muscle.toLowerCase().includes(q) ||
-                e.equipment.toLowerCase().includes(q)
+                e.equipment.toLowerCase().includes(q) ||
+                (e.secondary && e.secondary.some(s => s.toLowerCase().includes(q)))
             );
         }
 
         return `
         <div class="animate-fade">
-            <h2 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 1rem;">📚 Biblioteca de Ejercicios</h2>
+            <h2 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 1rem;">📚 Ejercicios (${EXERCISES_DB.length})</h2>
 
             <!-- Search -->
             <div class="form-group">
-                <input type="text" class="form-input" placeholder="🔍 Buscar ejercicio..." 
+                <input type="text" class="form-input" placeholder="🔍 Buscar ejercicio, músculo o equipo..." 
                     value="${this.searchQuery}" 
                     oninput="ExercisesPage.search(this.value)">
             </div>
 
-            <!-- Muscle Filter -->
-            <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 1.5rem; overflow-x: auto;">
-                ${muscles.map(m => `
-                    <button class="tag ${this.filter === m ? 'active' : ''}" onclick="ExercisesPage.setFilter('${m}')">
-                        ${m === 'all' ? '🏋️ Todos' : m}
-                    </button>
-                `).join('')}
-            </div>
+            <!-- Body Map Toggle -->
+            <button class="btn btn-secondary btn-sm mb-2" onclick="ExercisesPage.toggleBodyMap()" style="width: 100%;">
+                ${this.showBodyMap ? '📋 Ver lista' : '🧍 Seleccionar por muñeco'}
+            </button>
+
+            ${this.showBodyMap ? `
+                <div id="body-map-wrapper" style="margin-bottom: 1rem;">
+                    ${BodyMap.render({ selectable: true, onSelect: 'ExercisesPage.onBodyMapSelect' })}
+                </div>
+            ` : `
+                <!-- Muscle Filter Tags -->
+                <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 1.5rem; overflow-x: auto;">
+                    ${muscles.map(m => `
+                        <button class="tag ${this.filter === m ? 'active' : ''}" onclick="ExercisesPage.setFilter('${m}')">
+                            ${m === 'all' ? '🏋️ Todos' : m}
+                        </button>
+                    `).join('')}
+                </div>
+            `}
 
             <!-- Results count -->
-            <p class="text-muted mb-2" style="font-size: 0.8rem;">${filtered.length} ejercicios</p>
+            <p class="text-muted mb-2" style="font-size: 0.8rem;">${filtered.length} ejercicios ${this.filter !== 'all' ? `para ${this.filter}` : ''}</p>
 
             <!-- Exercise List -->
             ${filtered.map(exercise => `
@@ -151,6 +164,24 @@ const ExercisesPage = {
 
     closeDetail() {
         this.selectedExercise = null;
+        App.renderCurrentPage();
+    },
+
+    toggleBodyMap() {
+        this.showBodyMap = !this.showBodyMap;
+        if (!this.showBodyMap) {
+            BodyMap.selectedMuscles = [];
+        }
+        App.renderCurrentPage();
+    },
+
+    onBodyMapSelect(muscles) {
+        // Filter exercises by selected muscles from body map
+        if (muscles.length > 0) {
+            ExercisesPage.filter = 'bodymap';
+        } else {
+            ExercisesPage.filter = 'all';
+        }
         App.renderCurrentPage();
     }
 };

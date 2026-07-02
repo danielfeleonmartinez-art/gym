@@ -1,10 +1,13 @@
 // ===== ROUTINES PAGE =====
 const RoutinesPage = {
-    currentView: 'list', // list, detail, execute
+    currentView: 'list', // list, detail, execute, builder
     selectedRoutine: null,
     executionState: null,
 
     render() {
+        if (RoutineBuilder.isOpen) {
+            return RoutineBuilder.render();
+        }
         if (this.currentView === 'execute' && this.executionState) {
             return this.renderExecution();
         }
@@ -42,8 +45,11 @@ const RoutinesPage = {
                 <div class="card text-center" style="padding: 3rem 1.5rem;">
                     <div style="font-size: 3rem; margin-bottom: 1rem;">🏋️</div>
                     <h3 style="margin-bottom: 0.5rem;">No tienes rutinas aún</h3>
-                    <p class="text-secondary mb-3" style="font-size: 0.9rem;">Genera una rutina con IA o crea la tuya propia</p>
+                    <p class="text-secondary mb-3" style="font-size: 0.9rem;">Crea tu rutina personalizada, usa IA o elige una plantilla</p>
                     <div class="flex flex-col gap-2">
+                        <button class="btn btn-accent btn-full" onclick="RoutineBuilder.open()">
+                            🏗️ Crear mi Rutina (Muñeco Interactivo)
+                        </button>
                         <button class="btn btn-primary btn-full" onclick="RoutinesPage.generateAIRoutine()">
                             🤖 Generar con IA
                         </button>
@@ -72,8 +78,11 @@ const RoutinesPage = {
                 `).join('')}
 
                 <div class="mt-3 flex flex-col gap-2">
+                    <button class="btn btn-accent btn-full" onclick="RoutineBuilder.open()">
+                        🏗️ Crear Rutina Personalizada
+                    </button>
                     <button class="btn btn-primary btn-full" onclick="RoutinesPage.generateAIRoutine()">
-                        🤖 Generar Nueva Rutina con IA
+                        🤖 Generar con IA
                     </button>
                     <button class="btn btn-secondary btn-full" onclick="RoutinesPage.showTemplates()">
                         📋 Usar Plantilla
@@ -288,7 +297,7 @@ const RoutinesPage = {
     },
 
     createRoutine() {
-        this.generateAIRoutine();
+        RoutineBuilder.open();
     },
 
     // Execution
