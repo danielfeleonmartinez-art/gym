@@ -267,6 +267,18 @@ REGLAS DE RESPUESTA:
             return this.generateGreeting(profile, periodWeek);
         }
 
+        // 1RM Calculator
+        if (this.matchesIntent(lowerPrompt, ['1rm', 'maximo', 'rm', 'repeticion maxima', 'calcula mi maximo', 'calcular mi 1rm'])) {
+            const weight = profile.weight || 70;
+            return `🏆 **Calculadora de 1RM (Repetición Máxima)**\n\nPara calcular tu máximo teórico, dime:\n• Peso que levantas\n• Repeticiones que haces\n\nEjemplo: "Hago 80kg por 8 reps en bench"\n\n**Fórmula rápida (Brzycki):**\n• 80kg × 8 reps = **~101kg de 1RM**\n\n**Tabla de porcentajes:**\n| % | Peso | Reps | Uso |\n|---|------|------|-----|\n| 100% | 1RM | 1 | Test |\n| 90% | ${Math.round(weight*1.2*0.9)}kg | 3 | Fuerza |\n| 80% | ${Math.round(weight*1.2*0.8)}kg | 8 | Hipertrofia |\n| 70% | ${Math.round(weight*1.2*0.7)}kg | 12 | Resistencia |\n\nDime un ejercicio con peso y reps y te calculo el 1RM exacto.`;
+        }
+
+        // Somatotype question
+        if (this.matchesIntent(lowerPrompt, ['somatotipo', 'tipo de cuerpo', 'ectomorfo', 'mesomorfo', 'endomorfo', 'que tipo de cuerpo', 'mi tipo de cuerpo'])) {
+            const soma = FitnessTools.getSomatotype(profile);
+            return `🧬 **Tu Somatotipo: ${soma.type}**\n\n${soma.description}\n\n**🏋️ Entrenamiento ideal para ti:**\n${soma.training.map(t => '• ' + t).join('\n')}\n\n**🥗 Nutrición ideal:**\n${soma.nutrition.map(n => '• ' + n).join('\n')}\n\n💡 Recuerda: nadie es 100% un solo tipo. La mayoría somos una mezcla, pero tu tipo dominante define la estrategia óptima.`;
+        }
+
         // 19. Agradecimiento
         if (this.matchesIntent(lowerPrompt, ['gracias', 'genial', 'perfecto', 'excelente', 'crack', 'buenisimo', 'me encanta', 'eres el mejor'])) {
             return this.generateThankYouResponse(profile);

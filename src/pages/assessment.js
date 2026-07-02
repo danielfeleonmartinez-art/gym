@@ -63,6 +63,12 @@ const AssessmentPage = {
                 <h3 class="card-title mb-2">📈 Objetivo de Peso (IA)</h3>
                 ${this.renderWeightTimeline(profile)}
             </div>
+
+            <!-- Somatotype -->
+            <div class="card mt-3" style="border-color: var(--accent);">
+                <h3 class="card-title mb-2">🧬 Tu Somatotipo</h3>
+                ${this.renderSomatotype(profile)}
+            </div>
         </div>`;
     },
 
@@ -147,6 +153,34 @@ const AssessmentPage = {
                         <span style="min-width: 50px; text-align: right; font-weight: ${isCurrent ? '700' : '400'}; color: ${isCurrent ? 'var(--primary)' : 'var(--text-muted)'};">${projected}kg</span>
                     </div>`;
                 }).join('')}
+            </div>
+        `;
+    },
+
+    renderSomatotype(profile) {
+        const soma = FitnessTools.getSomatotype(profile);
+        const colors = { 'Ectomorfo': '#4ECDC4', 'Mesomorfo': '#6C63FF', 'Endomorfo': '#FF6B6B' };
+        const icons = { 'Ectomorfo': '🏃', 'Mesomorfo': '💪', 'Endomorfo': '🐻' };
+        
+        return `
+            <div style="text-align: center; margin-bottom: 1rem;">
+                <span style="font-size: 2.5rem;">${icons[soma.type]}</span>
+                <p style="font-size: 1.3rem; font-weight: 800; color: ${colors[soma.type]}; margin-top: 0.5rem;">${soma.type}</p>
+                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.3rem;">${soma.description}</p>
+            </div>
+            
+            <div style="margin-top: 1rem;">
+                <p style="font-weight: 600; margin-bottom: 0.5rem;">🏋️ Entrenamiento ideal:</p>
+                <ul style="list-style: none; padding: 0;">
+                    ${soma.training.map(t => '<li style="padding: 0.25rem 0; font-size: 0.8rem; color: var(--text-secondary);">• ' + t + '</li>').join('')}
+                </ul>
+            </div>
+            
+            <div style="margin-top: 1rem;">
+                <p style="font-weight: 600; margin-bottom: 0.5rem;">🥗 Nutrición ideal:</p>
+                <ul style="list-style: none; padding: 0;">
+                    ${soma.nutrition.map(n => '<li style="padding: 0.25rem 0; font-size: 0.8rem; color: var(--text-secondary);">• ' + n + '</li>').join('')}
+                </ul>
             </div>
         `;
     }

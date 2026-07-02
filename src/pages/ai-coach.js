@@ -15,6 +15,7 @@ const AICoachPage = {
                 <button class="quick-action" onclick="AICoachPage.quickPrompt('Dame un consejo de suplementación')">💊 Suplementos</button>
                 <button class="quick-action" onclick="AICoachPage.quickPrompt('Necesito motivación')">🔥 Motivación</button>
                 <button class="quick-action" onclick="AICoachPage.quickPrompt('Consejos de recuperación')">😴 Recovery</button>
+                <button class="quick-action" onclick="AICoachPage.quickPrompt('Calcula mi 1RM')">🏆 Calcular 1RM</button>
             </div>
 
             <!-- Chat Messages -->
