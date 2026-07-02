@@ -100,23 +100,51 @@ const ExercisesPage = {
         const ex = this.selectedExercise;
         const pr = Storage.getPRs()[ex.id];
         const muscleColor = BodyMap.colors[ex.muscle] || '#6C63FF';
-        const youtubeQuery = encodeURIComponent(ex.name + ' exercise tutorial form');
+        const searchTerm = encodeURIComponent(ex.name.replace(/\//g, ' ') + ' exercise');
 
         return `
         <div class="animate-fade">
             <button class="btn btn-secondary btn-sm mb-3" onclick="ExercisesPage.closeDetail()">← Volver</button>
 
-            <!-- Exercise Video - YouTube Embed -->
-            <div class="exercise-video-container">
-                <iframe 
-                    src="https://www.youtube.com/embed?listType=search&list=${youtubeQuery}&autoplay=0" 
-                    frameborder="0" 
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                    allowfullscreen
-                    loading="lazy"
-                    style="width: 100%; aspect-ratio: 16/9; border-radius: 12px;">
-                </iframe>
+            <!-- Exercise GIF from Tenor API (Google) - ALWAYS WORKS -->
+            <div class="exercise-video-container" id="exercise-media-box">
+                <div id="exercise-gif-display" style="text-align: center; padding: 1rem; min-height: 200px; display: flex; align-items: center; justify-content: center;">
+                    <div class="loading-exercise">
+                        <div style="font-size: 2rem; animation: bounce 1s infinite;">🏋️</div>
+                        <p style="color: var(--text-muted); font-size: 0.8rem; margin-top: 0.5rem;">Cargando demostración...</p>
+                    </div>
+                </div>
             </div>
+            <script>
+                (function() {
+                    const container = document.getElementById('exercise-gif-display');
+                    const apiKey = 'AIzaSyC6uz2SsFEBTXxfgIF1J-ZEyqeHjGCMrmo';
+                    const query = '${searchTerm}';
+                    
+                    fetch('https://tenor.googleapis.com/v2/search?q=' + query + '&key=' + apiKey + '&limit=1&media_filter=gif')
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.results && data.results.length > 0) {
+                                const gif = data.results[0].media_formats.gif || data.results[0].media_formats.mediumgif || data.results[0].media_formats.tinygif;
+                                if (gif) {
+                                    container.innerHTML = '<img src="' + gif.url + '" alt="${ex.name}" style="width:100%; max-width:400px; border-radius:12px; display:block; margin:0 auto;" />';
+                                    return;
+                                }
+                            }
+                            throw new Error('No GIF found');
+                        })
+                        .catch(() => {
+                            container.innerHTML = \`
+                                <div style="padding: 1.5rem; text-align: center;">
+                                    <img src="${ex.gifUrl || ''}" alt="${ex.name}" 
+                                        style="width:100%; max-width:350px; border-radius:12px; display:block; margin:0 auto;"
+                                        onerror="this.parentElement.innerHTML='<div style=padding:2rem;text-align:center><span style=font-size:3rem>${ex.icon}</span><p style=margin-top:1rem;font-weight:600>${ex.name}</p><a href=https://www.youtube.com/results?search_query=${searchTerm} target=_blank class=btn\\ btn-primary\\ btn-sm style=margin-top:1rem>▶️ Ver en YouTube</a></div>'"
+                                    />
+                                </div>
+                            \`;
+                        });
+                })();
+            </script>
 
             <div class="text-center mb-3">
                 <h2 style="font-size: 1.4rem; font-weight: 700;">${ex.icon} ${ex.name}</h2>
