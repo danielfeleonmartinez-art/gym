@@ -105,16 +105,23 @@ const ExercisesPage = {
         <div class="animate-fade">
             <button class="btn btn-secondary btn-sm mb-3" onclick="ExercisesPage.closeDetail()">← Volver</button>
 
-            <!-- Exercise Illustration (animated GIF) -->
+            <!-- Exercise Media -->
             <div class="exercise-gif-container">
-                ${BodyMap.getExerciseMedia(ex.id) ? `
-                    <img src="${BodyMap.getExerciseMedia(ex.id)}" alt="${ex.name} - demostración animada" loading="lazy" onerror="this.parentElement.innerHTML='<div class=exercise-gif-placeholder>${ex.icon} ${ex.name}<br><small>Imagen no disponible</small></div>'"/>
-                ` : `
-                    <div class="exercise-gif-placeholder">
-                        <span style="font-size: 3rem;">${ex.icon}</span><br>
-                        <span>${ex.name}</span>
-                    </div>
-                `}
+                <img id="exercise-gif" 
+                    src="${ex.gifUrl || ''}" 
+                    alt="${ex.name}" 
+                    loading="lazy"
+                    onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/${ex.id.replace(/-/g, '_')}/images/0.jpg'; this.onerror=function(){document.getElementById('exercise-gif-fallback').style.display='flex'; this.style.display='none';}"
+                    style="width: 100%; max-width: 350px; display: block; margin: 0 auto; border-radius: 12px;"
+                />
+                <div id="exercise-gif-fallback" style="display: none; flex-direction: column; align-items: center; padding: 2rem; gap: 1rem;">
+                    <span style="font-size: 4rem;">${ex.icon}</span>
+                    <p style="font-size: 1rem; font-weight: 600;">${ex.name}</p>
+                    <p style="font-size: 0.8rem; color: var(--text-muted);">Busca el ejercicio en video:</p>
+                    <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(ex.name + ' exercise how to')}" target="_blank" class="btn btn-primary btn-sm">
+                        ▶️ Ver en YouTube
+                    </a>
+                </div>
             </div>
 
             <div class="text-center mb-3">
