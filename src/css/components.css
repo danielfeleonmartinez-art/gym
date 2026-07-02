@@ -886,6 +886,20 @@
     font-size: 0.8rem;
 }
 
+/* Exercise Video */
+.exercise-video-container {
+    background: #000;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+
+.exercise-video-container iframe {
+    display: block;
+}
+
 /* ===== ROUTINE BUILDER ===== */
 .suggestion-item {
     display: flex;

@@ -100,28 +100,22 @@ const ExercisesPage = {
         const ex = this.selectedExercise;
         const pr = Storage.getPRs()[ex.id];
         const muscleColor = BodyMap.colors[ex.muscle] || '#6C63FF';
+        const youtubeQuery = encodeURIComponent(ex.name + ' exercise tutorial form');
 
         return `
         <div class="animate-fade">
             <button class="btn btn-secondary btn-sm mb-3" onclick="ExercisesPage.closeDetail()">← Volver</button>
 
-            <!-- Exercise Media -->
-            <div class="exercise-gif-container">
-                <img id="exercise-gif" 
-                    src="${ex.gifUrl || ''}" 
-                    alt="${ex.name}" 
+            <!-- Exercise Video - YouTube Embed -->
+            <div class="exercise-video-container">
+                <iframe 
+                    src="https://www.youtube.com/embed?listType=search&list=${youtubeQuery}&autoplay=0" 
+                    frameborder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                    allowfullscreen
                     loading="lazy"
-                    onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/${ex.id.replace(/-/g, '_')}/images/0.jpg'; this.onerror=function(){document.getElementById('exercise-gif-fallback').style.display='flex'; this.style.display='none';}"
-                    style="width: 100%; max-width: 350px; display: block; margin: 0 auto; border-radius: 12px;"
-                />
-                <div id="exercise-gif-fallback" style="display: none; flex-direction: column; align-items: center; padding: 2rem; gap: 1rem;">
-                    <span style="font-size: 4rem;">${ex.icon}</span>
-                    <p style="font-size: 1rem; font-weight: 600;">${ex.name}</p>
-                    <p style="font-size: 0.8rem; color: var(--text-muted);">Busca el ejercicio en video:</p>
-                    <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(ex.name + ' exercise how to')}" target="_blank" class="btn btn-primary btn-sm">
-                        ▶️ Ver en YouTube
-                    </a>
-                </div>
+                    style="width: 100%; aspect-ratio: 16/9; border-radius: 12px;">
+                </iframe>
             </div>
 
             <div class="text-center mb-3">
