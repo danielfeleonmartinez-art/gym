@@ -3,7 +3,15 @@ const ExercisesPage = {
     filter: 'all',
     searchQuery: '',
     selectedExercise: null,
-    showBodyMap: false,
+    showBodyMap: true, // Show body map by default
+    filteredByMuscles: [],
+
+    filterByMuscles(muscles) {
+        this.filteredByMuscles = muscles;
+        this.showBodyMap = false;
+        this.filter = 'bodymap';
+        App.renderCurrentPage();
+    },
 
     render() {
         if (this.selectedExercise) {
@@ -13,7 +21,12 @@ const ExercisesPage = {
         const muscles = ['all', 'Pecho', 'Espalda', 'Hombros', 'Piernas', 'Bíceps', 'Tríceps', 'Core'];
         let filtered = EXERCISES_DB;
 
-        if (this.filter !== 'all') {
+        if (this.filter === 'bodymap' && this.filteredByMuscles.length > 0) {
+            filtered = filtered.filter(e => 
+                this.filteredByMuscles.includes(e.muscle) || 
+                (e.secondary && e.secondary.some(s => this.filteredByMuscles.includes(s)))
+            );
+        } else if (this.filter !== 'all') {
             filtered = filtered.filter(e => e.muscle === this.filter || (e.secondary && e.secondary.includes(this.filter)));
         }
         if (this.searchQuery) {
@@ -26,39 +39,46 @@ const ExercisesPage = {
             );
         }
 
+        // If showing body map (main view)
+        if (this.showBodyMap && !this.searchQuery) {
+            return `
+            <div class="animate-fade">
+                <h2 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 0.5rem;">📚 Ejercicios (${EXERCISES_DB.length})</h2>
+                
+                <!-- Search always visible -->
+                <div class="form-group">
+                    <input type="text" class="form-input" placeholder="🔍 Buscar ejercicio..." 
+                        value="${this.searchQuery}" 
+                        oninput="ExercisesPage.search(this.value)">
+                </div>
+
+                <!-- Body Map as main selector -->
+                <div id="body-map-wrapper">
+                    ${BodyMap.render({ selectable: true })}
+                </div>
+
+                <!-- Quick filters below -->
+                <div style="margin-top: 1rem;">
+                    <p class="text-muted mb-1" style="font-size: 0.75rem;">O selecciona por grupo:</p>
+                    <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+                        ${muscles.filter(m => m !== 'all').map(m => `
+                            <button class="tag" onclick="ExercisesPage.setFilter('${m}')" style="border-color: ${BodyMap.colors[m] || 'var(--border)'}; color: ${BodyMap.colors[m] || 'var(--text-secondary)'};">
+                                ${m}
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>`;
+        }
+
         return `
         <div class="animate-fade">
-            <h2 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 1rem;">📚 Ejercicios (${EXERCISES_DB.length})</h2>
-
-            <!-- Search -->
-            <div class="form-group">
-                <input type="text" class="form-input" placeholder="🔍 Buscar ejercicio, músculo o equipo..." 
-                    value="${this.searchQuery}" 
-                    oninput="ExercisesPage.search(this.value)">
+            <div class="flex justify-between items-center mb-2">
+                <h2 style="font-size: 1.2rem; font-weight: 700;">
+                    ${this.filter === 'bodymap' ? `💪 ${this.filteredByMuscles.join(' + ')}` : this.filter !== 'all' ? `💪 ${this.filter}` : '📚 Todos los Ejercicios'}
+                </h2>
+                <button class="btn btn-secondary btn-sm" onclick="ExercisesPage.showBodyMapView()">🧍 Muñeco</button>
             </div>
-
-            <!-- Body Map Toggle -->
-            <button class="btn btn-secondary btn-sm mb-2" onclick="ExercisesPage.toggleBodyMap()" style="width: 100%;">
-                ${this.showBodyMap ? '📋 Ver lista' : '🧍 Seleccionar por muñeco'}
-            </button>
-
-            ${this.showBodyMap ? `
-                <div id="body-map-wrapper" style="margin-bottom: 1rem;">
-                    ${BodyMap.render({ selectable: true, onSelect: 'ExercisesPage.onBodyMapSelect' })}
-                </div>
-            ` : `
-                <!-- Muscle Filter Tags -->
-                <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 1.5rem; overflow-x: auto;">
-                    ${muscles.map(m => `
-                        <button class="tag ${this.filter === m ? 'active' : ''}" onclick="ExercisesPage.setFilter('${m}')">
-                            ${m === 'all' ? '🏋️ Todos' : m}
-                        </button>
-                    `).join('')}
-                </div>
-            `}
-
-            <!-- Results count -->
-            <p class="text-muted mb-2" style="font-size: 0.8rem;">${filtered.length} ejercicios ${this.filter !== 'all' ? `para ${this.filter}` : ''}</p>
 
             <!-- Exercise List -->
             ${filtered.map(exercise => `
@@ -79,19 +99,27 @@ const ExercisesPage = {
     renderDetail() {
         const ex = this.selectedExercise;
         const pr = Storage.getPRs()[ex.id];
+        const muscleColor = BodyMap.colors[ex.muscle] || '#6C63FF';
 
         return `
         <div class="animate-fade">
             <button class="btn btn-secondary btn-sm mb-3" onclick="ExercisesPage.closeDetail()">← Volver</button>
 
+            <!-- Exercise Illustration -->
+            <div class="card mb-2" style="padding: 0.75rem; background: #0a0a15; border-color: ${muscleColor}40;">
+                ${BodyMap.getExerciseIllustration(ex.id)}
+            </div>
+
             <div class="text-center mb-3">
-                <div style="font-size: 3rem; margin-bottom: 0.5rem;">${ex.icon}</div>
-                <h2 style="font-size: 1.4rem; font-weight: 700;">${ex.name}</h2>
+                <h2 style="font-size: 1.4rem; font-weight: 700;">${ex.icon} ${ex.name}</h2>
                 <div class="flex justify-between items-center mt-1" style="justify-content: center; gap: 0.75rem;">
-                    <span class="badge badge-primary">${ex.muscle}</span>
+                    <span class="badge" style="background: ${muscleColor}22; color: ${muscleColor};">${ex.muscle}</span>
                     <span class="badge badge-accent">${ex.equipment}</span>
                     <span class="badge badge-${ex.difficulty === 'principiante' ? 'success' : ex.difficulty === 'intermedio' ? 'warning' : 'danger'}">${ex.difficulty}</span>
                 </div>
+                ${ex.secondary && ex.secondary.length > 0 ? `
+                    <p class="text-muted mt-1" style="font-size: 0.75rem;">También trabaja: ${ex.secondary.join(', ')}</p>
+                ` : ''}
             </div>
 
             ${pr ? `
@@ -167,6 +195,14 @@ const ExercisesPage = {
         App.renderCurrentPage();
     },
 
+    showBodyMapView() {
+        this.showBodyMap = true;
+        this.filter = 'all';
+        this.filteredByMuscles = [];
+        BodyMap.selectedMuscles = [];
+        App.renderCurrentPage();
+    },
+
     toggleBodyMap() {
         this.showBodyMap = !this.showBodyMap;
         if (!this.showBodyMap) {
@@ -176,7 +212,6 @@ const ExercisesPage = {
     },
 
     onBodyMapSelect(muscles) {
-        // Filter exercises by selected muscles from body map
         if (muscles.length > 0) {
             ExercisesPage.filter = 'bodymap';
         } else {
