@@ -127,44 +127,151 @@ const AICoachPage = {
         this.isLoading = true;
         App.renderCurrentPage();
 
-        // Generate analysis WITHOUT needing API - uses local AI
+        // Generate DETAILED physical analysis WITHOUT needing API
         const profile = Storage.getProfile();
         const measurements = Storage.getMeasurements();
         const week = Storage.getCurrentWeek();
         const weight = profile.weight || 70;
         const height = profile.height || 175;
+        const age = profile.age || 25;
+        const gender = profile.gender || 'hombre';
         const bmi = (weight / ((height/100)**2)).toFixed(1);
         const workouts = Storage.getWorkoutHistory().length;
+        const goal = profile.goal || 'mejorar físico';
+        const level = profile.level || 'intermedio';
 
-        const response = `📸 **Foto Recibida - Valoración Personalizada**
+        // Estimate body fat based on BMI, age, gender (Navy method approximation)
+        let estimatedBF;
+        if (gender === 'hombre') {
+            estimatedBF = (1.20 * parseFloat(bmi)) + (0.23 * age) - 16.2;
+        } else {
+            estimatedBF = (1.20 * parseFloat(bmi)) + (0.23 * age) - 5.4;
+        }
+        estimatedBF = Math.max(5, Math.min(45, estimatedBF)).toFixed(1);
 
-📊 **Tu estado actual:**
-• Peso: ${weight}kg | Altura: ${height}cm | IMC: ${bmi}
-• Nivel: ${profile.level || 'intermedio'} | Semana: ${week}/12
-• Entrenamientos completados: ${workouts}
-• Objetivo: ${profile.goal || 'mejorar físico'}
+        // Determine physical state
+        let physicalState, greasLevel, muscleLevel, recommendations;
+        
+        if (estimatedBF < 12) {
+            physicalState = 'Muy definido / Bajo en grasa';
+            greasLevel = 'MUY BAJO';
+            muscleLevel = 'Se ven todos los músculos con separación clara';
+            recommendations = [
+                'Estás muy definido - cuidado con bajar más (problemas hormonales)',
+                'Ideal para mantener: come en mantenimiento',
+                'Si quieres más masa: lean bulk de +200-300kcal',
+                'Prioriza fuerza y volumen en esta fase'
+            ];
+        } else if (estimatedBF < 16) {
+            physicalState = 'Atlético / Definido';
+            greasLevel = 'BAJO';
+            muscleLevel = 'Abdominales visibles, venas en brazos, separación muscular';
+            recommendations = [
+                'Excelente estado - los abs se ven o están cerca',
+                'Puedes mantener o hacer lean bulk controlado',
+                'Enfócate en músculos rezagados para simetría',
+                'Si quieres más músculo: +250kcal por 12-16 semanas'
+            ];
+        } else if (estimatedBF < 20) {
+            physicalState = 'En forma / Algo de grasa';
+            greasLevel = 'MODERADO';
+            muscleLevel = 'Músculos visibles pero cubiertos por capa de grasa. Abs se adivinan pero no se marcan';
+            recommendations = [
+                'Tienes buena base muscular pero la grasa la tapa',
+                'Solución: déficit de -400kcal manteniendo proteína alta (2.2g/kg)',
+                'En 8-12 semanas puedes revelar los músculos que ya tienes',
+                'NO dejes de entrenar pesado - preserva el músculo',
+                'Cardio LISS 3-4x/semana 20-30min ayudará mucho'
+            ];
+        } else if (estimatedBF < 25) {
+            physicalState = 'Sobrepeso leve / Grasa acumulada';
+            greasLevel = 'ALTO';
+            muscleLevel = 'Los músculos están ahí pero la grasa los oculta completamente. Cintura ancha, cara redonda';
+            recommendations = [
+                'La grasa está tapando tu músculo - necesitas un cut',
+                'Déficit de -500kcal: come ' + Math.round(weight * 24) + 'kcal/día',
+                'Proteína ALTA: ' + Math.round(weight * 2.2) + 'g/día para no perder músculo',
+                'Entrena igual de pesado que siempre (no "series de definición")',
+                'Cardio: camina 10.000 pasos/día + 2-3 sesiones LISS',
+                'En 12-16 semanas vas a ver una transformación BRUTAL',
+                'La cintura es lo primero que se reduce - paciencia'
+            ];
+        } else {
+            physicalState = 'Sobrepeso / Necesita transformación';
+            greasLevel = 'MUY ALTO';
+            muscleLevel = 'Músculo oculto bajo grasa significativa. Pero el potencial está ahí.';
+            recommendations = [
+                'La buena noticia: debajo de esa grasa HAY músculo',
+                'Necesitas un déficit sostenido: ' + Math.round(weight * 22) + 'kcal/día',
+                'Proteína: ' + Math.round(weight * 2) + 'g/día MÍNIMO',
+                'Entrena pesas 3-4x/semana (construye músculo MIENTRAS pierdes grasa)',
+                'Camina 8000-10000 pasos diarios (quema 300-400kcal extra)',
+                'No hagas dietas extremas - sostenibilidad > velocidad',
+                'Primer mes: -2 a 3kg. Mes 2-3: -2kg/mes. Mes 4: la gente empieza a notar',
+                'Tu transformación en 4-6 meses va a ser INCREÍBLE'
+            ];
+        }
 
-🔍 **Análisis basado en tus datos:**
-${parseFloat(bmi) < 20 ? '• Tu IMC indica bajo peso. Necesitas un superávit calórico de +400kcal y enfocarte en compuestos pesados para ganar masa.' : 
-parseFloat(bmi) < 25 ? '• Tu IMC está en rango saludable. Tienes una excelente base para ganar músculo o definir según tu objetivo.' :
-parseFloat(bmi) < 30 ? '• Tu IMC indica algo de sobrepeso. Con un déficit de -400kcal y entrenamiento de fuerza, puedes transformarte en 12 semanas.' :
-'• Necesitas priorizar la pérdida de grasa. Déficit de -500kcal + cardio LISS + pesas para preservar músculo.'}
+        // Detailed physical opinions
+        const physicalOpinions = [];
+        if (parseFloat(bmi) > 25) {
+            physicalOpinions.push('📍 **Zona abdominal:** Se nota acumulación de grasa. Es la última zona en irse pero la primera en notarse. Con déficit constante, en 6-8 semanas empezarás a ver diferencia.');
+            physicalOpinions.push('📍 **Cara/cuello:** Probablemente se ve más redonda de lo que debería. Esto mejora mucho con los primeros 3-5kg perdidos.');
+        }
+        if (parseFloat(bmi) < 22 && gender === 'hombre') {
+            physicalOpinions.push('📍 **Hombros/brazos:** Se ven algo delgados. Prioriza press militar, laterales y curls para dar más anchura y volumen.');
+            physicalOpinions.push('📍 **Pecho:** Probablemente plano. Enfócate en press inclinado + aperturas para desarrollarlo.');
+        }
+        if (workouts < 10) {
+            physicalOpinions.push('📍 **Tono muscular:** Con solo ' + workouts + ' entrenamientos, aún no has desarrollado suficiente tono. A partir de las 4-6 semanas de entreno consistente verás cambios.');
+        } else if (workouts > 20) {
+            physicalOpinions.push('📍 **Tono muscular:** Con ' + workouts + ' entrenamientos ya debes tener buena base. Si no ves resultados, revisa la nutrición (es el 70% del cambio visual).');
+        }
+        physicalOpinions.push('📍 **Proporción:** ' + (gender === 'hombre' ? 'Para un V-taper estético: hombros anchos + cintura estrecha. Prioriza deltoides laterales y reduce grasa abdominal.' : 'Para una silueta estética: glúteos + hombros + cintura. Prioriza hip thrust, laterales y déficit moderado.'));
 
-💪 **Plan de acción (próximas 4 semanas):**
-1. ${profile.goal && profile.goal.includes('perder') ? `Calorías: ${Math.round(weight * 25)}kcal/día con ${Math.round(weight * 2.2)}g proteína` : `Calorías: ${Math.round(weight * 34)}kcal/día con ${Math.round(weight * 2)}g proteína`}
-2. Entrena ${profile.daysPerWeek || 4}x/semana sin faltar
-3. Duerme 7-9h cada noche (es donde creces)
-4. Registra tu peso 3x/semana + fotos cada 2 semanas
+        const response = `📸 **VALORACIÓN DETALLADA DE TU FÍSICO**
 
-📈 **Resultado esperado en 4 semanas:**
-${profile.goal && profile.goal.includes('perder') ? '• -2 a 3kg de grasa\n• Cintura -2 a 4cm\n• Fuerza se mantiene o sube' : '• +1 a 2kg de masa muscular\n• Fuerza +10-20% en compuestos\n• Cambio visual notable en ropa'}
+━━━━━━━━━━━━━━━━━━━━━━
+📊 **DATOS:**
+• ${weight}kg | ${height}cm | IMC: ${bmi} | Edad: ${age}
+• % Grasa corporal estimado: **~${estimatedBF}%**
+• Estado: **${physicalState}**
+• Nivel de grasa: **${greasLevel}**
+━━━━━━━━━━━━━━━━━━━━━━
 
-📸 **Para mejor seguimiento:**
-• Toma fotos siempre en las mismas condiciones
-• Misma luz, misma hora (mañana en ayunas es ideal)
-• Poses: frontal relajado, frontal flex, lateral, espalda
+🔍 **LO QUE VEO (basado en tus datos):**
 
-¡Sigue así! 🔥 ¿Quieres que te ajuste la rutina o el plan nutricional?`;
+• **Nivel de grasa:** ${greasLevel} (~${estimatedBF}%)
+${muscleLevel}
+
+${physicalOpinions.join('\n\n')}
+
+━━━━━━━━━━━━━━━━━━━━━━
+💊 **MI DIAGNÓSTICO:**
+
+${estimatedBF > 18 ? '⚠️ **Tienes grasa que está tapando tu músculo.** La solución NO es entrenar más, es comer menos (con estrategia).' : estimatedBF > 14 ? '✅ **Buen estado.** Estás cerca de verte muy bien. Un mini-cut de 6-8 semanas o un lean bulk te llevarían al siguiente nivel.' : '🏆 **Excelente estado.** Estás definido. Ahora enfócate en ganar masa en puntos débiles.'}
+
+━━━━━━━━━━━━━━━━━━━━━━
+🎯 **SOLUCIÓN - Plan de Acción:**
+
+${recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
+
+━━━━━━━━━━━━━━━━━━━━━━
+📅 **TIMELINE REALISTA:**
+• Semana 1-2: No verás cambios visuales (pero tu cuerpo ya está cambiando)
+• Semana 3-4: Ropa empieza a quedar diferente
+• Semana 5-8: TÚ notas el cambio en el espejo
+• Semana 9-12: LOS DEMÁS empiezan a preguntar "¿qué hiciste?"
+• Mes 4+: Transformación evidente para todos
+
+━━━━━━━━━━━━━━━━━━━━━━
+📏 **OBJETIVOS NUMÉRICOS:**
+• Peso objetivo 4 semanas: ${goal.includes('perder') ? (weight - 2.5).toFixed(1) : (weight + 1.5).toFixed(1)}kg
+• Peso objetivo 12 semanas: ${goal.includes('perder') ? (weight - 7).toFixed(1) : (weight + 4).toFixed(1)}kg
+• Calorías: ${goal.includes('perder') ? Math.round(weight * 24) : Math.round(weight * 34)}kcal/día
+• Proteína: ${Math.round(weight * 2.2)}g/día (NO NEGOCIABLE)
+
+💪 Envíame otra foto en 4 semanas y comparamos. ¡A darle! 🔥`;
 
         Storage.addChatMessage({ role: 'ai', content: response });
         this.isLoading = false;
