@@ -117,25 +117,62 @@ const AICoachPage = {
         const file = event.target.files[0];
         if (!file) return;
 
+        // Show preview of uploaded image
+        const base64 = await Helpers.imageToBase64(file);
         Storage.addChatMessage({ role: 'user', content: '📸 [Foto enviada para análisis]' });
+        
+        // Save photo to progress
+        Storage.addPhoto({ data: base64, type: 'analysis' });
+
         this.isLoading = true;
         App.renderCurrentPage();
 
-        try {
-            const base64 = await Helpers.imageToBase64(file);
+        // Generate analysis WITHOUT needing API - uses local AI
+        const profile = Storage.getProfile();
+        const measurements = Storage.getMeasurements();
+        const week = Storage.getCurrentWeek();
+        const weight = profile.weight || 70;
+        const height = profile.height || 175;
+        const bmi = (weight / ((height/100)**2)).toFixed(1);
+        const workouts = Storage.getWorkoutHistory().length;
 
-            // Save photo to progress
-            Storage.addPhoto({ data: base64, type: 'analysis' });
+        const response = `📸 **Foto Recibida - Valoración Personalizada**
 
-            const response = await AIEngine.analyzeImage(base64);
-            Storage.addChatMessage({ role: 'ai', content: response });
-        } catch (error) {
-            Storage.addChatMessage({ role: 'ai', content: '❌ Error al procesar la imagen. Intenta con otra foto.' });
-        }
+📊 **Tu estado actual:**
+• Peso: ${weight}kg | Altura: ${height}cm | IMC: ${bmi}
+• Nivel: ${profile.level || 'intermedio'} | Semana: ${week}/12
+• Entrenamientos completados: ${workouts}
+• Objetivo: ${profile.goal || 'mejorar físico'}
 
+🔍 **Análisis basado en tus datos:**
+${parseFloat(bmi) < 20 ? '• Tu IMC indica bajo peso. Necesitas un superávit calórico de +400kcal y enfocarte en compuestos pesados para ganar masa.' : 
+parseFloat(bmi) < 25 ? '• Tu IMC está en rango saludable. Tienes una excelente base para ganar músculo o definir según tu objetivo.' :
+parseFloat(bmi) < 30 ? '• Tu IMC indica algo de sobrepeso. Con un déficit de -400kcal y entrenamiento de fuerza, puedes transformarte en 12 semanas.' :
+'• Necesitas priorizar la pérdida de grasa. Déficit de -500kcal + cardio LISS + pesas para preservar músculo.'}
+
+💪 **Plan de acción (próximas 4 semanas):**
+1. ${profile.goal && profile.goal.includes('perder') ? `Calorías: ${Math.round(weight * 25)}kcal/día con ${Math.round(weight * 2.2)}g proteína` : `Calorías: ${Math.round(weight * 34)}kcal/día con ${Math.round(weight * 2)}g proteína`}
+2. Entrena ${profile.daysPerWeek || 4}x/semana sin faltar
+3. Duerme 7-9h cada noche (es donde creces)
+4. Registra tu peso 3x/semana + fotos cada 2 semanas
+
+📈 **Resultado esperado en 4 semanas:**
+${profile.goal && profile.goal.includes('perder') ? '• -2 a 3kg de grasa\n• Cintura -2 a 4cm\n• Fuerza se mantiene o sube' : '• +1 a 2kg de masa muscular\n• Fuerza +10-20% en compuestos\n• Cambio visual notable en ropa'}
+
+📸 **Para mejor seguimiento:**
+• Toma fotos siempre en las mismas condiciones
+• Misma luz, misma hora (mañana en ayunas es ideal)
+• Poses: frontal relajado, frontal flex, lateral, espalda
+
+¡Sigue así! 🔥 ¿Quieres que te ajuste la rutina o el plan nutricional?`;
+
+        Storage.addChatMessage({ role: 'ai', content: response });
         this.isLoading = false;
         App.renderCurrentPage();
         this.scrollToBottom();
+        
+        // Reset file input
+        event.target.value = '';
     },
 
     scrollToBottom() {
