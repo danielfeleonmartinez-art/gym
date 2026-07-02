@@ -105,9 +105,16 @@ const ExercisesPage = {
         <div class="animate-fade">
             <button class="btn btn-secondary btn-sm mb-3" onclick="ExercisesPage.closeDetail()">← Volver</button>
 
-            <!-- Exercise Illustration -->
-            <div class="card mb-2" style="padding: 0.75rem; background: #0a0a15; border-color: ${muscleColor}40;">
-                ${BodyMap.getExerciseIllustration(ex.id)}
+            <!-- Exercise Illustration (animated GIF) -->
+            <div class="exercise-gif-container">
+                ${BodyMap.getExerciseMedia(ex.id) ? `
+                    <img src="${BodyMap.getExerciseMedia(ex.id)}" alt="${ex.name} - demostración animada" loading="lazy" onerror="this.parentElement.innerHTML='<div class=exercise-gif-placeholder>${ex.icon} ${ex.name}<br><small>Imagen no disponible</small></div>'"/>
+                ` : `
+                    <div class="exercise-gif-placeholder">
+                        <span style="font-size: 3rem;">${ex.icon}</span><br>
+                        <span>${ex.name}</span>
+                    </div>
+                `}
             </div>
 
             <div class="text-center mb-3">

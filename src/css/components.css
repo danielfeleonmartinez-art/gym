@@ -732,98 +732,158 @@
 }
 
 
-/* ===== BODY MAP v2 ===== */
-.body-map-v2 {
-    background: #0a0a15;
-    border-radius: var(--radius-lg);
-    padding: 1rem;
+/* ===== BODY MAP v3 PROFESSIONAL ===== */
+.body-map-pro {
+    background: linear-gradient(180deg, #080810 0%, #0f0f1a 100%);
+    border-radius: var(--radius-xl);
+    padding: 1.5rem 1rem;
     border: 1px solid var(--border);
 }
 
-.body-map-figures {
+.body-map-title {
+    font-size: 1rem;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 0.25rem;
+}
+
+.body-map-subtitle {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.body-figures-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 0.5rem;
-    margin: 1rem 0;
 }
 
-.body-figure {
+.body-fig-col {
     text-align: center;
 }
 
-.figure-label {
-    font-size: 0.65rem;
+.fig-view-label {
+    font-size: 0.6rem;
     font-weight: 700;
+    letter-spacing: 2px;
     color: var(--text-muted);
-    letter-spacing: 1px;
-    margin-bottom: 0.3rem;
+    text-transform: uppercase;
 }
 
-.body-figure svg {
-    width: 100%;
-    max-width: 160px;
+.muscle-zone {
+    cursor: pointer;
+    transition: all 0.15s ease;
 }
 
-.body-figure svg path,
-.body-figure svg ellipse,
-.body-figure svg rect {
-    transition: all 0.2s ease;
+.muscle-zone:hover {
+    filter: brightness(1.5);
 }
 
-.body-figure svg path[onclick]:hover,
-.body-figure svg ellipse[onclick]:hover,
-.body-figure svg rect[onclick]:hover {
-    filter: brightness(1.4);
-    transform-origin: center;
+.muscle-zone.active {
+    filter: brightness(1.2) drop-shadow(0 0 4px currentColor);
 }
 
-.body-map-selection {
+.selected-muscles-bar {
     margin-top: 1rem;
     padding-top: 1rem;
     border-top: 1px solid var(--border);
 }
 
-.muscle-tag {
+.selected-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    justify-content: center;
+}
+
+.muscle-chip {
     display: inline-flex;
     align-items: center;
-    padding: 0.3rem 0.7rem;
+    gap: 0.3rem;
+    padding: 0.35rem 0.7rem;
     border-radius: 20px;
     font-size: 0.75rem;
     font-weight: 600;
     cursor: pointer;
+    background: color-mix(in srgb, var(--chip-color) 15%, transparent);
+    border: 1px solid var(--chip-color);
+    color: var(--chip-color);
     transition: var(--transition);
 }
 
-.muscle-tag:hover {
+.muscle-chip:hover { opacity: 0.7; }
+
+.chip-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+.chip-x {
+    font-size: 0.9rem;
+    margin-left: 0.2rem;
     opacity: 0.7;
 }
 
-/* Exercise Illustration */
-.exercise-illust {
-    width: 100%;
-    max-width: 300px;
-    height: auto;
-    margin: 0 auto;
-    display: block;
+.body-map-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    justify-content: center;
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border);
 }
 
-.body-map-container {
+.legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.legend-item:hover {
+    background: rgba(255,255,255,0.05);
+}
+
+.legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.legend-name {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+}
+
+/* Exercise GIF */
+.exercise-gif-container {
+    background: #050508;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    margin-bottom: 1rem;
     text-align: center;
 }
 
-.body-map-header {
-    display: flex;
-    gap: 0.25rem;
-    margin-bottom: 0.5rem;
-    background: var(--bg-input);
-    border-radius: var(--radius);
-    padding: 0.2rem;
-    display: inline-flex;
+.exercise-gif-container img {
+    width: 100%;
+    max-width: 300px;
+    height: auto;
+    display: block;
+    margin: 0 auto;
 }
 
-.body-map-header .tab {
-    padding: 0.4rem 0.8rem;
-    font-size: 0.7rem;
+.exercise-gif-placeholder {
+    padding: 2rem;
+    color: var(--text-muted);
+    font-size: 0.8rem;
 }
 
 /* ===== ROUTINE BUILDER ===== */

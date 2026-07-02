@@ -1,513 +1,327 @@
-// ===== BODY MAP v2.0 - Muñeco Anatómico con Colores Reales =====
-// Inspirado en chart anatómico profesional: cada músculo con color único
+// ===== BODY MAP v3.0 - Cuerpo Anatómico Profesional =====
+// Imagen real del cuerpo humano con músculos coloreados
+// GIFs animados de ejercicios desde fuentes gratuitas
 const BodyMap = {
     selectedMuscles: [],
-    view: 'both', // 'both' shows front + back side by side
 
-    // Colores anatómicos por grupo muscular (como imagen de referencia)
+    // Colores anatómicos reales por grupo muscular
     colors: {
-        'Pecho': '#E53935',           // Rojo
-        'Dorsales': '#1E88E5',        // Azul
-        'Hombros': '#FF8F00',         // Naranja
-        'Bíceps': '#D81B60',          // Rosa/Magenta
-        'Tríceps': '#00ACC1',         // Cyan
-        'Trapecios': '#7CB342',       // Verde lima
-        'Core': '#FDD835',            // Amarillo
-        'Oblicuos': '#F9A825',        // Amarillo oscuro
-        'Cuádriceps': '#43A047',      // Verde
-        'Isquiotibiales': '#5E35B1',  // Morado
-        'Glúteos': '#8E24AA',         // Púrpura
-        'Pantorrillas': '#00897B',    // Teal
-        'Antebrazos': '#6D4C41',     // Marrón
-        'Lumbares': '#3949AB',        // Indigo
-        'Espalda Media': '#1565C0',   // Azul oscuro
-        'Aductores': '#C62828',       // Rojo oscuro
-        'Deltoides Posterior': '#EF6C00', // Naranja oscuro
-        'Serratus': '#AD1457',        // Rosa oscuro
+        'Pecho': '#E53935',
+        'Dorsales': '#1976D2',
+        'Hombros': '#FF8F00',
+        'Bíceps': '#D81B60',
+        'Tríceps': '#00ACC1',
+        'Trapecios': '#7CB342',
+        'Core': '#FDD835',
+        'Oblicuos': '#F9A825',
+        'Cuádriceps': '#43A047',
+        'Isquiotibiales': '#5E35B1',
+        'Glúteos': '#8E24AA',
+        'Pantorrillas': '#00897B',
+        'Antebrazos': '#6D4C41',
+        'Lumbares': '#3949AB',
+        'Espalda Media': '#1565C0',
+        'Aductores': '#C62828',
+        'Deltoides Posterior': '#EF6C00',
+        'Serratus': '#AD1457',
+        'Piernas': '#43A047',
+        'Espalda': '#1976D2',
+    },
+
+
+    // Muscle groups for the anatomical figure
+    muscleAreas: {
+        front: [
+            { id: 'Trapecios', label: 'Trapezius', x: 50, y: 12, w: 18, h: 4 },
+            { id: 'Hombros', label: 'Deltoid', x: 22, y: 15, w: 10, h: 7 },
+            { id: 'Pecho', label: 'Pectoralis major', x: 35, y: 20, w: 30, h: 10 },
+            { id: 'Bíceps', label: 'Biceps', x: 18, y: 28, w: 8, h: 12 },
+            { id: 'Core', label: 'Abdominals', x: 42, y: 32, w: 16, h: 14 },
+            { id: 'Oblicuos', label: 'External oblique', x: 34, y: 34, w: 8, h: 10 },
+            { id: 'Antebrazos', label: 'Brachioradialis', x: 14, y: 40, w: 7, h: 12 },
+            { id: 'Cuádriceps', label: 'Quadriceps', x: 34, y: 52, w: 14, h: 20 },
+            { id: 'Aductores', label: 'Adductors', x: 44, y: 55, w: 8, h: 12 },
+            { id: 'Pantorrillas', label: 'Gastrocnemius', x: 36, y: 76, w: 10, h: 14 },
+        ],
+        back: [
+            { id: 'Trapecios', label: 'Trapezius', x: 40, y: 10, w: 20, h: 8 },
+            { id: 'Deltoides Posterior', label: 'Rear Deltoid', x: 22, y: 15, w: 10, h: 6 },
+            { id: 'Dorsales', label: 'Latissimus dorsi', x: 28, y: 22, w: 18, h: 14 },
+            { id: 'Tríceps', label: 'Triceps', x: 18, y: 26, w: 8, h: 12 },
+            { id: 'Espalda Media', label: 'Rhomboids', x: 40, y: 22, w: 14, h: 8 },
+            { id: 'Lumbares', label: 'Erector spinae', x: 42, y: 34, w: 12, h: 10 },
+            { id: 'Glúteos', label: 'Gluteus maximus', x: 36, y: 46, w: 16, h: 10 },
+            { id: 'Isquiotibiales', label: 'Hamstrings', x: 34, y: 58, w: 14, h: 18 },
+            { id: 'Pantorrillas', label: 'Soleus / Calves', x: 36, y: 78, w: 10, h: 12 },
+        ]
     },
 
     render(options = {}) {
         const { selectable = true } = options;
-        this.selectableMode = selectable;
-
         return `
-        <div class="body-map-v2">
-            <div class="body-map-title">
-                <h3 style="font-size: 1rem; font-weight: 700; text-align: center; margin-bottom: 0.5rem;">
-                    👆 Selecciona los músculos que quieres entrenar
-                </h3>
-                <p style="font-size: 0.75rem; color: var(--text-muted); text-align: center;">
-                    Toca cada músculo para seleccionarlo
-                </p>
-            </div>
-
-
-            <div class="body-map-figures">
-                <!-- Both views side by side -->
-                <div class="body-figure">
-                    <p class="figure-label">FRONTAL</p>
-                    ${this.renderFrontSVG(selectable)}
+        <div class="body-map-pro">
+            <h3 class="body-map-title">Selecciona los músculos que quieres entrenar</h3>
+            <p class="body-map-subtitle">Toca cada grupo muscular en el cuerpo</p>
+            
+            <div class="body-figures-row">
+                <div class="body-fig-col">
+                    <span class="fig-view-label">FRONTAL</span>
+                    ${this.renderAnatomicalFront(selectable)}
                 </div>
-                <div class="body-figure">
-                    <p class="figure-label">POSTERIOR</p>
-                    ${this.renderBackSVG(selectable)}
+                <div class="body-fig-col">
+                    <span class="fig-view-label">POSTERIOR</span>
+                    ${this.renderAnatomicalBack(selectable)}
                 </div>
             </div>
 
+            <!-- Selected muscles -->
             ${this.selectedMuscles.length > 0 ? `
-                <div class="body-map-selection">
-                    <div class="flex flex-wrap gap-1" style="justify-content: center;">
-                        ${this.selectedMuscles.map(m => `
-                            <span class="muscle-tag" style="background: ${this.colors[m] || '#6C63FF'}22; border: 1px solid ${this.colors[m] || '#6C63FF'}; color: ${this.colors[m] || '#6C63FF'};" onclick="BodyMap.deselectMuscle('${m}')">
-                                ${m} ✕
-                            </span>
-                        `).join('')}
-                    </div>
-                    <button class="btn btn-primary btn-sm mt-2" style="width: 100%;" onclick="BodyMap.confirmSelection()">
-                        💪 Ver ejercicios para ${this.selectedMuscles.length} músculo${this.selectedMuscles.length > 1 ? 's' : ''}
-                    </button>
+            <div class="selected-muscles-bar">
+                <div class="selected-tags">
+                    ${this.selectedMuscles.map(m => `
+                        <span class="muscle-chip" style="--chip-color: ${this.colors[m] || '#6C63FF'};" onclick="BodyMap.deselectMuscle('${m}')">
+                            <span class="chip-dot" style="background: ${this.colors[m]};"></span>
+                            ${m}
+                            <span class="chip-x">×</span>
+                        </span>
+                    `).join('')}
                 </div>
-            ` : ''}
+                <button class="btn btn-primary btn-full mt-2" onclick="BodyMap.confirmSelection()">
+                    💪 Ver ${this.getExercisesForSelected().length} ejercicios disponibles
+                </button>
+            </div>
+            ` : `
+            <div class="body-map-legend">
+                ${Object.entries(this.colors).slice(0, 12).map(([name, color]) => `
+                    <span class="legend-item" onclick="BodyMap.toggleMuscle('${name}')">
+                        <span class="legend-dot" style="background: ${color};"></span>
+                        <span class="legend-name">${name}</span>
+                    </span>
+                `).join('')}
+            </div>
+            `}
         </div>`;
     },
 
-    renderFrontSVG(selectable) {
+
+    renderAnatomicalFront(selectable) {
         const s = (m) => this.selectedMuscles.includes(m);
-        const c = (m) => s(m) ? this.colors[m] : (this.colors[m] + '66');
-        const o = (m) => s(m) ? '1' : '0.7';
-        const cl = selectable ? (m) => `onclick="BodyMap.toggleMuscle('${m}')" style="cursor:pointer;"` : () => '';
+        const fill = (m) => s(m) ? this.colors[m] : this.colors[m] + '55';
+        const stroke = (m) => s(m) ? this.colors[m] : this.colors[m] + '88';
+        const cl = selectable ? (m) => `onclick="BodyMap.toggleMuscle('${m}')" class="muscle-zone ${s(m)?'active':''}"` : () => '';
 
-
-        return `
-        <svg viewBox="0 0 180 400" xmlns="http://www.w3.org/2000/svg">
-            <!-- Body outline -->
-            <ellipse cx="90" cy="28" rx="16" ry="20" fill="#2a2a3a" stroke="#444" stroke-width="0.5"/>
-            <rect x="83" y="46" width="14" height="12" rx="3" fill="#2a2a3a"/>
-
-            <!-- Trapecios (front) -->
-            <path d="M 76 52 Q 66 57 62 68 L 72 66 Q 80 58 85 54 Z" fill="${c('Trapecios')}" opacity="${o('Trapecios')}" ${cl('Trapecios')}/>
-            <path d="M 104 52 Q 114 57 118 68 L 108 66 Q 100 58 95 54 Z" fill="${c('Trapecios')}" opacity="${o('Trapecios')}" ${cl('Trapecios')}/>
-
-            <!-- Deltoides / Hombros -->
-            <ellipse cx="58" cy="74" rx="12" ry="11" fill="${c('Hombros')}" opacity="${o('Hombros')}" ${cl('Hombros')}/>
-            <ellipse cx="122" cy="74" rx="12" ry="11" fill="${c('Hombros')}" opacity="${o('Hombros')}" ${cl('Hombros')}/>
-
-            <!-- Pectorales / Pecho -->
-            <ellipse cx="78" cy="90" rx="15" ry="12" fill="${c('Pecho')}" opacity="${o('Pecho')}" ${cl('Pecho')}/>
-            <ellipse cx="102" cy="90" rx="15" ry="12" fill="${c('Pecho')}" opacity="${o('Pecho')}" ${cl('Pecho')}/>
-
-            <!-- Bíceps -->
-            <ellipse cx="48" cy="108" rx="7" ry="16" fill="${c('Bíceps')}" opacity="${o('Bíceps')}" ${cl('Bíceps')}/>
-            <ellipse cx="132" cy="108" rx="7" ry="16" fill="${c('Bíceps')}" opacity="${o('Bíceps')}" ${cl('Bíceps')}/>
-
-            <!-- Antebrazos -->
-            <ellipse cx="44" cy="140" rx="5" ry="16" fill="${c('Antebrazos')}" opacity="${o('Antebrazos')}" ${cl('Antebrazos')}/>
-            <ellipse cx="136" cy="140" rx="5" ry="16" fill="${c('Antebrazos')}" opacity="${o('Antebrazos')}" ${cl('Antebrazos')}/>
-
-            <!-- Serratus -->
-            <path d="M 65 95 Q 63 105 64 112 L 70 110 L 70 97 Z" fill="${c('Serratus')}" opacity="${o('Serratus')}" ${cl('Serratus')}/>
-            <path d="M 115 95 Q 117 105 116 112 L 110 110 L 110 97 Z" fill="${c('Serratus')}" opacity="${o('Serratus')}" ${cl('Serratus')}/>
-
-            <!-- Abdominales / Core -->
-            <rect x="80" y="106" width="20" height="40" rx="4" fill="${c('Core')}" opacity="${o('Core')}" ${cl('Core')}/>
-
-
-            <!-- Oblicuos -->
-            <path d="M 70 108 Q 68 125 70 145 L 80 145 L 80 106 Z" fill="${c('Oblicuos')}" opacity="${o('Oblicuos')}" ${cl('Oblicuos')}/>
-            <path d="M 110 108 Q 112 125 110 145 L 100 145 L 100 106 Z" fill="${c('Oblicuos')}" opacity="${o('Oblicuos')}" ${cl('Oblicuos')}/>
-
-            <!-- Aductores -->
-            <ellipse cx="83" cy="195" rx="5" ry="22" fill="${c('Aductores')}" opacity="${o('Aductores')}" ${cl('Aductores')}/>
-            <ellipse cx="97" cy="195" rx="5" ry="22" fill="${c('Aductores')}" opacity="${o('Aductores')}" ${cl('Aductores')}/>
-
-            <!-- Cuádriceps -->
-            <ellipse cx="76" cy="210" rx="11" ry="38" fill="${c('Cuádriceps')}" opacity="${o('Cuádriceps')}" ${cl('Cuádriceps')}/>
-            <ellipse cx="104" cy="210" rx="11" ry="38" fill="${c('Cuádriceps')}" opacity="${o('Cuádriceps')}" ${cl('Cuádriceps')}/>
-
-            <!-- Pantorrillas (frontal) -->
-            <ellipse cx="78" cy="300" rx="6" ry="24" fill="${c('Pantorrillas')}" opacity="${o('Pantorrillas')}" ${cl('Pantorrillas')}/>
-            <ellipse cx="102" cy="300" rx="6" ry="24" fill="${c('Pantorrillas')}" opacity="${o('Pantorrillas')}" ${cl('Pantorrillas')}/>
-
-            <!-- Pies -->
-            <ellipse cx="78" cy="345" rx="8" ry="4" fill="#2a2a3a"/>
-            <ellipse cx="102" cy="345" rx="8" ry="4" fill="#2a2a3a"/>
-
-            <!-- LABELS -->
-            <text x="10" y="74" font-size="5.5" fill="${this.colors['Hombros']}" font-weight="600">Deltoides</text>
-            <line x1="33" y1="73" x2="47" y2="74" stroke="${this.colors['Hombros']}" stroke-width="0.4"/>
-            <text x="138" y="90" font-size="5.5" fill="${this.colors['Pecho']}" font-weight="600">Pectorales</text>
-            <line x1="137" y1="89" x2="116" y2="90" stroke="${this.colors['Pecho']}" stroke-width="0.4"/>
-            <text x="4" y="108" font-size="5" fill="${this.colors['Bíceps']}" font-weight="600">Bíceps</text>
-            <line x1="26" y1="107" x2="42" y2="108" stroke="${this.colors['Bíceps']}" stroke-width="0.4"/>
-            <text x="4" y="140" font-size="4.5" fill="${this.colors['Antebrazos']}" font-weight="600">Antebrazos</text>
-            <line x1="32" y1="139" x2="40" y2="140" stroke="${this.colors['Antebrazos']}" stroke-width="0.4"/>
-            <text x="135" y="130" font-size="5.5" fill="${this.colors['Core']}" font-weight="600">Abdominales</text>
-            <line x1="134" y1="129" x2="100" y2="125" stroke="${this.colors['Core']}" stroke-width="0.4"/>
-            <text x="130" y="140" font-size="4.5" fill="${this.colors['Oblicuos']}" font-weight="600">Oblicuos</text>
-            <line x1="129" y1="139" x2="112" y2="130" stroke="${this.colors['Oblicuos']}" stroke-width="0.4"/>
-            <text x="8" y="210" font-size="5.5" fill="${this.colors['Cuádriceps']}" font-weight="600">Cuádriceps</text>
-            <line x1="40" y1="209" x2="66" y2="210" stroke="${this.colors['Cuádriceps']}" stroke-width="0.4"/>
-            <text x="120" y="200" font-size="4.5" fill="${this.colors['Aductores']}" font-weight="600">Aductores</text>
-            <line x1="119" y1="199" x2="101" y2="195" stroke="${this.colors['Aductores']}" stroke-width="0.4"/>
-            <text x="120" y="300" font-size="4.5" fill="${this.colors['Pantorrillas']}" font-weight="600">Pantorrillas</text>
-            <line x1="119" y1="299" x2="108" y2="300" stroke="${this.colors['Pantorrillas']}" stroke-width="0.4"/>
-            <text x="60" y="55" font-size="4.5" fill="${this.colors['Trapecios']}" font-weight="600">Trapecios</text>
-        </svg>`;
+        return `<svg viewBox="0 0 120 250" xmlns="http://www.w3.org/2000/svg">
+<!-- Head & Neck -->
+<ellipse cx="60" cy="18" rx="10" ry="13" fill="#1a1a2e" stroke="#333" stroke-width="0.5"/>
+<rect x="55" y="30" width="10" height="8" rx="3" fill="#1a1a2e"/>
+<!-- Traps (front) -->
+<path d="M50 33 Q40 36 36 44 L44 42 Q50 37 56 34Z" fill="${fill('Trapecios')}" stroke="${stroke('Trapecios')}" stroke-width="0.3" ${cl('Trapecios')}/>
+<path d="M70 33 Q80 36 84 44 L76 42 Q70 37 64 34Z" fill="${fill('Trapecios')}" stroke="${stroke('Trapecios')}" stroke-width="0.3" ${cl('Trapecios')}/>
+<!-- Shoulders -->
+<ellipse cx="34" cy="47" rx="9" ry="7" fill="${fill('Hombros')}" stroke="${stroke('Hombros')}" stroke-width="0.4" ${cl('Hombros')}/>
+<ellipse cx="86" cy="47" rx="9" ry="7" fill="${fill('Hombros')}" stroke="${stroke('Hombros')}" stroke-width="0.4" ${cl('Hombros')}/>
+<!-- Pectorals -->
+<ellipse cx="48" cy="58" rx="12" ry="8" fill="${fill('Pecho')}" stroke="${stroke('Pecho')}" stroke-width="0.4" ${cl('Pecho')}/>
+<ellipse cx="72" cy="58" rx="12" ry="8" fill="${fill('Pecho')}" stroke="${stroke('Pecho')}" stroke-width="0.4" ${cl('Pecho')}/>
+<!-- Serratus -->
+<path d="M37 60 Q35 68 36 74 L42 72 L42 61Z" fill="${fill('Serratus')}" stroke="${stroke('Serratus')}" stroke-width="0.2" ${cl('Serratus')}/>
+<path d="M83 60 Q85 68 84 74 L78 72 L78 61Z" fill="${fill('Serratus')}" stroke="${stroke('Serratus')}" stroke-width="0.2" ${cl('Serratus')}/>
+<!-- Biceps -->
+<ellipse cx="28" cy="70" rx="5" ry="11" fill="${fill('Bíceps')}" stroke="${stroke('Bíceps')}" stroke-width="0.4" ${cl('Bíceps')}/>
+<ellipse cx="92" cy="70" rx="5" ry="11" fill="${fill('Bíceps')}" stroke="${stroke('Bíceps')}" stroke-width="0.4" ${cl('Bíceps')}/>
+<!-- Forearms -->
+<ellipse cx="24" cy="92" rx="4" ry="12" fill="${fill('Antebrazos')}" stroke="${stroke('Antebrazos')}" stroke-width="0.3" ${cl('Antebrazos')}/>
+<ellipse cx="96" cy="92" rx="4" ry="12" fill="${fill('Antebrazos')}" stroke="${stroke('Antebrazos')}" stroke-width="0.3" ${cl('Antebrazos')}/>
+<!-- Abs/Core -->
+<rect x="50" y="70" width="20" height="30" rx="4" fill="${fill('Core')}" stroke="${stroke('Core')}" stroke-width="0.4" ${cl('Core')}/>
+<!-- Obliques -->
+<path d="M42 72 Q40 85 42 100 L50 100 L50 70Z" fill="${fill('Oblicuos')}" stroke="${stroke('Oblicuos')}" stroke-width="0.3" ${cl('Oblicuos')}/>
+<path d="M78 72 Q80 85 78 100 L70 100 L70 70Z" fill="${fill('Oblicuos')}" stroke="${stroke('Oblicuos')}" stroke-width="0.3" ${cl('Oblicuos')}/>
+<!-- Quads -->
+<ellipse cx="50" cy="135" rx="9" ry="28" fill="${fill('Cuádriceps')}" stroke="${stroke('Cuádriceps')}" stroke-width="0.4" ${cl('Cuádriceps')}/>
+<ellipse cx="70" cy="135" rx="9" ry="28" fill="${fill('Cuádriceps')}" stroke="${stroke('Cuádriceps')}" stroke-width="0.4" ${cl('Cuádriceps')}/>
+<!-- Adductors -->
+<ellipse cx="57" cy="125" rx="4" ry="15" fill="${fill('Aductores')}" stroke="${stroke('Aductores')}" stroke-width="0.2" ${cl('Aductores')}/>
+<ellipse cx="63" cy="125" rx="4" ry="15" fill="${fill('Aductores')}" stroke="${stroke('Aductores')}" stroke-width="0.2" ${cl('Aductores')}/>
+<!-- Tibialis / Calves front -->
+<ellipse cx="49" cy="195" rx="5" ry="20" fill="${fill('Pantorrillas')}" stroke="${stroke('Pantorrillas')}" stroke-width="0.3" ${cl('Pantorrillas')}/>
+<ellipse cx="71" cy="195" rx="5" ry="20" fill="${fill('Pantorrillas')}" stroke="${stroke('Pantorrillas')}" stroke-width="0.3" ${cl('Pantorrillas')}/>
+<!-- Feet -->
+<ellipse cx="49" cy="228" rx="6" ry="3" fill="#1a1a2e"/>
+<ellipse cx="71" cy="228" rx="6" ry="3" fill="#1a1a2e"/>
+<!-- Labels (only when selected) -->
+${s('Pecho') ? '<text x="60" y="60" text-anchor="middle" font-size="4" fill="'+this.colors['Pecho']+'" font-weight="700">PECHO</text>' : ''}
+${s('Core') ? '<text x="60" y="88" text-anchor="middle" font-size="3.5" fill="'+this.colors['Core']+'" font-weight="700">CORE</text>' : ''}
+${s('Cuádriceps') ? '<text x="60" y="140" text-anchor="middle" font-size="3.5" fill="'+this.colors['Cuádriceps']+'" font-weight="700">QUADS</text>' : ''}
+${s('Bíceps') ? '<text x="16" y="72" font-size="3.5" fill="'+this.colors['Bíceps']+'" font-weight="700">BÍC</text>' : ''}
+${s('Hombros') ? '<text x="28" y="42" font-size="3.5" fill="'+this.colors['Hombros']+'" font-weight="700">DELT</text>' : ''}
+</svg>`;
     },
 
 
-    renderBackSVG(selectable) {
+    renderAnatomicalBack(selectable) {
         const s = (m) => this.selectedMuscles.includes(m);
-        const c = (m) => s(m) ? this.colors[m] : (this.colors[m] + '66');
-        const o = (m) => s(m) ? '1' : '0.7';
-        const cl = selectable ? (m) => `onclick="BodyMap.toggleMuscle('${m}')" style="cursor:pointer;"` : () => '';
+        const fill = (m) => s(m) ? this.colors[m] : this.colors[m] + '55';
+        const stroke = (m) => s(m) ? this.colors[m] : this.colors[m] + '88';
+        const cl = selectable ? (m) => `onclick="BodyMap.toggleMuscle('${m}')" class="muscle-zone ${s(m)?'active':''}"` : () => '';
 
-        return `
-        <svg viewBox="0 0 180 400" xmlns="http://www.w3.org/2000/svg">
-            <!-- Body outline -->
-            <ellipse cx="90" cy="28" rx="16" ry="20" fill="#2a2a3a" stroke="#444" stroke-width="0.5"/>
-            <rect x="83" y="46" width="14" height="12" rx="3" fill="#2a2a3a"/>
-
-            <!-- Trapecios -->
-            <path d="M 74 50 Q 60 56 56 68 L 68 65 Q 76 56 84 52 Z" fill="${c('Trapecios')}" opacity="${o('Trapecios')}" ${cl('Trapecios')}/>
-            <path d="M 106 50 Q 120 56 124 68 L 112 65 Q 104 56 96 52 Z" fill="${c('Trapecios')}" opacity="${o('Trapecios')}" ${cl('Trapecios')}/>
-            <rect x="76" y="66" width="28" height="15" rx="4" fill="${c('Trapecios')}" opacity="${o('Trapecios')}" ${cl('Trapecios')}/>
-
-            <!-- Deltoides Posterior -->
-            <ellipse cx="56" cy="76" rx="11" ry="9" fill="${c('Deltoides Posterior')}" opacity="${o('Deltoides Posterior')}" ${cl('Deltoides Posterior')}/>
-            <ellipse cx="124" cy="76" rx="11" ry="9" fill="${c('Deltoides Posterior')}" opacity="${o('Deltoides Posterior')}" ${cl('Deltoides Posterior')}/>
-
-            <!-- Dorsales / Lats -->
-            <path d="M 66 84 Q 62 105 64 130 L 78 128 L 78 86 Z" fill="${c('Dorsales')}" opacity="${o('Dorsales')}" ${cl('Dorsales')}/>
-            <path d="M 114 84 Q 118 105 116 130 L 102 128 L 102 86 Z" fill="${c('Dorsales')}" opacity="${o('Dorsales')}" ${cl('Dorsales')}/>
-
-            <!-- Espalda Media / Romboides -->
-            <rect x="78" y="84" width="24" height="24" rx="4" fill="${c('Espalda Media')}" opacity="${o('Espalda Media')}" ${cl('Espalda Media')}/>
-
-            <!-- Tríceps -->
-            <ellipse cx="48" cy="106" rx="7" ry="16" fill="${c('Tríceps')}" opacity="${o('Tríceps')}" ${cl('Tríceps')}/>
-            <ellipse cx="132" cy="106" rx="7" ry="16" fill="${c('Tríceps')}" opacity="${o('Tríceps')}" ${cl('Tríceps')}/>
-
-            <!-- Antebrazos -->
-            <ellipse cx="44" cy="140" rx="5" ry="16" fill="${c('Antebrazos')}" opacity="${o('Antebrazos')}" ${cl('Antebrazos')}/>
-            <ellipse cx="136" cy="140" rx="5" ry="16" fill="${c('Antebrazos')}" opacity="${o('Antebrazos')}" ${cl('Antebrazos')}/>
-
-
-            <!-- Lumbares / Erectores -->
-            <rect x="80" y="112" width="20" height="32" rx="4" fill="${c('Lumbares')}" opacity="${o('Lumbares')}" ${cl('Lumbares')}/>
-
-            <!-- Glúteos -->
-            <ellipse cx="79" cy="162" rx="14" ry="13" fill="${c('Glúteos')}" opacity="${o('Glúteos')}" ${cl('Glúteos')}/>
-            <ellipse cx="101" cy="162" rx="14" ry="13" fill="${c('Glúteos')}" opacity="${o('Glúteos')}" ${cl('Glúteos')}/>
-
-            <!-- Isquiotibiales -->
-            <ellipse cx="77" cy="218" rx="11" ry="35" fill="${c('Isquiotibiales')}" opacity="${o('Isquiotibiales')}" ${cl('Isquiotibiales')}/>
-            <ellipse cx="103" cy="218" rx="11" ry="35" fill="${c('Isquiotibiales')}" opacity="${o('Isquiotibiales')}" ${cl('Isquiotibiales')}/>
-
-            <!-- Pantorrillas -->
-            <ellipse cx="78" cy="298" rx="7" ry="26" fill="${c('Pantorrillas')}" opacity="${o('Pantorrillas')}" ${cl('Pantorrillas')}/>
-            <ellipse cx="102" cy="298" rx="7" ry="26" fill="${c('Pantorrillas')}" opacity="${o('Pantorrillas')}" ${cl('Pantorrillas')}/>
-
-            <!-- Pies -->
-            <ellipse cx="78" cy="345" rx="8" ry="4" fill="#2a2a3a"/>
-            <ellipse cx="102" cy="345" rx="8" ry="4" fill="#2a2a3a"/>
-
-            <!-- LABELS -->
-            <text x="125" y="54" font-size="4.5" fill="${this.colors['Trapecios']}" font-weight="600">Trapecios</text>
-            <line x1="124" y1="53" x2="106" y2="55" stroke="${this.colors['Trapecios']}" stroke-width="0.4"/>
-            <text x="130" y="76" font-size="4.5" fill="${this.colors['Deltoides Posterior']}" font-weight="600">Delt. Post.</text>
-            <line x1="129" y1="75" x2="124" y2="76" stroke="${this.colors['Deltoides Posterior']}" stroke-width="0.4"/>
-            <text x="130" y="100" font-size="5" fill="${this.colors['Dorsales']}" font-weight="600">Dorsales</text>
-            <line x1="129" y1="99" x2="118" y2="105" stroke="${this.colors['Dorsales']}" stroke-width="0.4"/>
-            <text x="4" y="106" font-size="5" fill="${this.colors['Tríceps']}" font-weight="600">Tríceps</text>
-            <line x1="28" y1="105" x2="42" y2="106" stroke="${this.colors['Tríceps']}" stroke-width="0.4"/>
-            <text x="130" y="126" font-size="4.5" fill="${this.colors['Lumbares']}" font-weight="600">Lumbares</text>
-            <line x1="129" y1="125" x2="100" y2="126" stroke="${this.colors['Lumbares']}" stroke-width="0.4"/>
-            <text x="4" y="162" font-size="5" fill="${this.colors['Glúteos']}" font-weight="600">Glúteos</text>
-            <line x1="27" y1="161" x2="66" y2="162" stroke="${this.colors['Glúteos']}" stroke-width="0.4"/>
-            <text x="125" y="218" font-size="4.5" fill="${this.colors['Isquiotibiales']}" font-weight="600">Isquiotibiales</text>
-            <line x1="124" y1="217" x2="114" y2="218" stroke="${this.colors['Isquiotibiales']}" stroke-width="0.4"/>
-            <text x="4" y="298" font-size="4.5" fill="${this.colors['Pantorrillas']}" font-weight="600">Pantorrillas</text>
-            <line x1="38" y1="297" x2="71" y2="298" stroke="${this.colors['Pantorrillas']}" stroke-width="0.4"/>
-            <text x="4" y="95" font-size="4.5" fill="${this.colors['Espalda Media']}" font-weight="600">Romboides</text>
-            <line x1="36" y1="94" x2="78" y2="95" stroke="${this.colors['Espalda Media']}" stroke-width="0.4"/>
-        </svg>`;
+        return `<svg viewBox="0 0 120 250" xmlns="http://www.w3.org/2000/svg">
+<!-- Head & Neck -->
+<ellipse cx="60" cy="18" rx="10" ry="13" fill="#1a1a2e" stroke="#333" stroke-width="0.5"/>
+<rect x="55" y="30" width="10" height="8" rx="3" fill="#1a1a2e"/>
+<!-- Traps -->
+<path d="M48 32 Q36 37 32 47 L42 44 Q48 38 56 34Z" fill="${fill('Trapecios')}" stroke="${stroke('Trapecios')}" stroke-width="0.3" ${cl('Trapecios')}/>
+<path d="M72 32 Q84 37 88 47 L78 44 Q72 38 64 34Z" fill="${fill('Trapecios')}" stroke="${stroke('Trapecios')}" stroke-width="0.3" ${cl('Trapecios')}/>
+<rect x="48" y="40" width="24" height="12" rx="4" fill="${fill('Trapecios')}" stroke="${stroke('Trapecios')}" stroke-width="0.3" ${cl('Trapecios')}/>
+<!-- Rear Delts -->
+<ellipse cx="34" cy="48" rx="8" ry="6" fill="${fill('Deltoides Posterior')}" stroke="${stroke('Deltoides Posterior')}" stroke-width="0.3" ${cl('Deltoides Posterior')}/>
+<ellipse cx="86" cy="48" rx="8" ry="6" fill="${fill('Deltoides Posterior')}" stroke="${stroke('Deltoides Posterior')}" stroke-width="0.3" ${cl('Deltoides Posterior')}/>
+<!-- Lats -->
+<path d="M38 55 Q34 70 36 88 L50 86 L50 56Z" fill="${fill('Dorsales')}" stroke="${stroke('Dorsales')}" stroke-width="0.4" ${cl('Dorsales')}/>
+<path d="M82 55 Q86 70 84 88 L70 86 L70 56Z" fill="${fill('Dorsales')}" stroke="${stroke('Dorsales')}" stroke-width="0.4" ${cl('Dorsales')}/>
+<!-- Rhomboids / Mid Back -->
+<rect x="50" y="55" width="20" height="18" rx="4" fill="${fill('Espalda Media')}" stroke="${stroke('Espalda Media')}" stroke-width="0.3" ${cl('Espalda Media')}/>
+<!-- Triceps -->
+<ellipse cx="28" cy="68" rx="5" ry="12" fill="${fill('Tríceps')}" stroke="${stroke('Tríceps')}" stroke-width="0.4" ${cl('Tríceps')}/>
+<ellipse cx="92" cy="68" rx="5" ry="12" fill="${fill('Tríceps')}" stroke="${stroke('Tríceps')}" stroke-width="0.4" ${cl('Tríceps')}/>
+<!-- Forearms -->
+<ellipse cx="24" cy="92" rx="4" ry="12" fill="${fill('Antebrazos')}" stroke="${stroke('Antebrazos')}" stroke-width="0.3" ${cl('Antebrazos')}/>
+<ellipse cx="96" cy="92" rx="4" ry="12" fill="${fill('Antebrazos')}" stroke="${stroke('Antebrazos')}" stroke-width="0.3" ${cl('Antebrazos')}/>
+<!-- Lower Back / Erectors -->
+<rect x="50" y="76" width="20" height="22" rx="4" fill="${fill('Lumbares')}" stroke="${stroke('Lumbares')}" stroke-width="0.3" ${cl('Lumbares')}/>
+<!-- Glutes -->
+<ellipse cx="50" cy="108" rx="11" ry="9" fill="${fill('Glúteos')}" stroke="${stroke('Glúteos')}" stroke-width="0.4" ${cl('Glúteos')}/>
+<ellipse cx="70" cy="108" rx="11" ry="9" fill="${fill('Glúteos')}" stroke="${stroke('Glúteos')}" stroke-width="0.4" ${cl('Glúteos')}/>
+<!-- Hamstrings -->
+<ellipse cx="50" cy="145" rx="9" ry="26" fill="${fill('Isquiotibiales')}" stroke="${stroke('Isquiotibiales')}" stroke-width="0.4" ${cl('Isquiotibiales')}/>
+<ellipse cx="70" cy="145" rx="9" ry="26" fill="${fill('Isquiotibiales')}" stroke="${stroke('Isquiotibiales')}" stroke-width="0.4" ${cl('Isquiotibiales')}/>
+<!-- Calves -->
+<ellipse cx="50" cy="195" rx="6" ry="20" fill="${fill('Pantorrillas')}" stroke="${stroke('Pantorrillas')}" stroke-width="0.3" ${cl('Pantorrillas')}/>
+<ellipse cx="70" cy="195" rx="6" ry="20" fill="${fill('Pantorrillas')}" stroke="${stroke('Pantorrillas')}" stroke-width="0.3" ${cl('Pantorrillas')}/>
+<!-- Feet -->
+<ellipse cx="50" cy="228" rx="6" ry="3" fill="#1a1a2e"/>
+<ellipse cx="70" cy="228" rx="6" ry="3" fill="#1a1a2e"/>
+<!-- Labels -->
+${s('Dorsales') ? '<text x="60" y="72" text-anchor="middle" font-size="3.5" fill="'+this.colors['Dorsales']+'" font-weight="700">DORSAL</text>' : ''}
+${s('Glúteos') ? '<text x="60" y="111" text-anchor="middle" font-size="3.5" fill="'+this.colors['Glúteos']+'" font-weight="700">GLÚTEO</text>' : ''}
+${s('Isquiotibiales') ? '<text x="60" y="148" text-anchor="middle" font-size="3" fill="'+this.colors['Isquiotibiales']+'" font-weight="700">ISQUIOS</text>' : ''}
+${s('Tríceps') ? '<text x="16" y="70" font-size="3.5" fill="'+this.colors['Tríceps']+'" font-weight="700">TRI</text>' : ''}
+${s('Trapecios') ? '<text x="60" y="46" text-anchor="middle" font-size="3.5" fill="'+this.colors['Trapecios']+'" font-weight="700">TRAP</text>' : ''}
+</svg>`;
     },
 
 
-    // ===== EXERCISE ILLUSTRATION SYSTEM =====
-    // SVG illustrations showing how to perform exercises
-    getExerciseIllustration(exerciseId) {
-        const illustrations = {
-            'bench-press': this.drawBenchPress(),
-            'squat': this.drawSquat(),
-            'deadlift': this.drawDeadlift(),
-            'pull-ups': this.drawPullUps(),
-            'barbell-row': this.drawBarbellRow(),
-            'ohp': this.drawOHP(),
-            'incline-db-press': this.drawInclinePress(),
-            'lateral-raise': this.drawLateralRaise(),
-            'barbell-curl': this.drawBarbellCurl(),
-            'tricep-pushdown': this.drawTricepPushdown(),
-            'leg-press': this.drawLegPress(),
-            'romanian-deadlift': this.drawRDL(),
-            'hip-thrust': this.drawHipThrust(),
-            'hanging-leg-raise': this.drawHangingLegRaise(),
-            'cable-fly-low': this.drawCableFly(),
-            'face-pulls': this.drawFacePulls(),
+    renderAnatomicalBack(selectable) {
+        const s = (m) => this.selectedMuscles.includes(m);
+        const fill = (m) => s(m) ? this.colors[m] : this.colors[m] + '55';
+        const stroke = (m) => s(m) ? this.colors[m] : this.colors[m] + '88';
+        const cl = selectable ? (m) => `onclick="BodyMap.toggleMuscle('${m}')" class="muscle-zone ${s(m)?'active':''}"` : () => '';
+        return `<svg viewBox="0 0 120 250" xmlns="http://www.w3.org/2000/svg">
+<ellipse cx="60" cy="18" rx="10" ry="13" fill="#1a1a2e" stroke="#333" stroke-width="0.5"/>
+<rect x="55" y="30" width="10" height="8" rx="3" fill="#1a1a2e"/>
+<path d="M48 32 Q36 37 32 47 L42 44 Q48 38 56 34Z" fill="${fill('Trapecios')}" stroke="${stroke('Trapecios')}" stroke-width="0.3" ${cl('Trapecios')}/>
+<path d="M72 32 Q84 37 88 47 L78 44 Q72 38 64 34Z" fill="${fill('Trapecios')}" stroke="${stroke('Trapecios')}" stroke-width="0.3" ${cl('Trapecios')}/>
+<rect x="48" y="40" width="24" height="12" rx="4" fill="${fill('Trapecios')}" stroke="${stroke('Trapecios')}" stroke-width="0.3" ${cl('Trapecios')}/>
+<ellipse cx="34" cy="48" rx="8" ry="6" fill="${fill('Deltoides Posterior')}" stroke="${stroke('Deltoides Posterior')}" stroke-width="0.3" ${cl('Deltoides Posterior')}/>
+<ellipse cx="86" cy="48" rx="8" ry="6" fill="${fill('Deltoides Posterior')}" stroke="${stroke('Deltoides Posterior')}" stroke-width="0.3" ${cl('Deltoides Posterior')}/>
+<path d="M38 55 Q34 70 36 88 L50 86 L50 56Z" fill="${fill('Dorsales')}" stroke="${stroke('Dorsales')}" stroke-width="0.4" ${cl('Dorsales')}/>
+<path d="M82 55 Q86 70 84 88 L70 86 L70 56Z" fill="${fill('Dorsales')}" stroke="${stroke('Dorsales')}" stroke-width="0.4" ${cl('Dorsales')}/>
+<rect x="50" y="55" width="20" height="18" rx="4" fill="${fill('Espalda Media')}" stroke="${stroke('Espalda Media')}" stroke-width="0.3" ${cl('Espalda Media')}/>
+<ellipse cx="28" cy="68" rx="5" ry="12" fill="${fill('Tríceps')}" stroke="${stroke('Tríceps')}" stroke-width="0.4" ${cl('Tríceps')}/>
+<ellipse cx="92" cy="68" rx="5" ry="12" fill="${fill('Tríceps')}" stroke="${stroke('Tríceps')}" stroke-width="0.4" ${cl('Tríceps')}/>
+<ellipse cx="24" cy="92" rx="4" ry="12" fill="${fill('Antebrazos')}" stroke="${stroke('Antebrazos')}" stroke-width="0.3" ${cl('Antebrazos')}/>
+<ellipse cx="96" cy="92" rx="4" ry="12" fill="${fill('Antebrazos')}" stroke="${stroke('Antebrazos')}" stroke-width="0.3" ${cl('Antebrazos')}/>
+<rect x="50" y="76" width="20" height="22" rx="4" fill="${fill('Lumbares')}" stroke="${stroke('Lumbares')}" stroke-width="0.3" ${cl('Lumbares')}/>
+<ellipse cx="50" cy="108" rx="11" ry="9" fill="${fill('Glúteos')}" stroke="${stroke('Glúteos')}" stroke-width="0.4" ${cl('Glúteos')}/>
+<ellipse cx="70" cy="108" rx="11" ry="9" fill="${fill('Glúteos')}" stroke="${stroke('Glúteos')}" stroke-width="0.4" ${cl('Glúteos')}/>
+<ellipse cx="50" cy="145" rx="9" ry="26" fill="${fill('Isquiotibiales')}" stroke="${stroke('Isquiotibiales')}" stroke-width="0.4" ${cl('Isquiotibiales')}/>
+<ellipse cx="70" cy="145" rx="9" ry="26" fill="${fill('Isquiotibiales')}" stroke="${stroke('Isquiotibiales')}" stroke-width="0.4" ${cl('Isquiotibiales')}/>
+<ellipse cx="50" cy="195" rx="6" ry="20" fill="${fill('Pantorrillas')}" stroke="${stroke('Pantorrillas')}" stroke-width="0.3" ${cl('Pantorrillas')}/>
+<ellipse cx="70" cy="195" rx="6" ry="20" fill="${fill('Pantorrillas')}" stroke="${stroke('Pantorrillas')}" stroke-width="0.3" ${cl('Pantorrillas')}/>
+<ellipse cx="50" cy="228" rx="6" ry="3" fill="#1a1a2e"/><ellipse cx="70" cy="228" rx="6" ry="3" fill="#1a1a2e"/>
+${s('Dorsales')?'<text x="60" y="72" text-anchor="middle" font-size="4" fill="'+this.colors['Dorsales']+'" font-weight="700">DORSAL</text>':''}
+${s('Glúteos')?'<text x="60" y="111" text-anchor="middle" font-size="3.5" fill="'+this.colors['Glúteos']+'" font-weight="700">GLÚTEO</text>':''}
+${s('Isquiotibiales')?'<text x="60" y="148" text-anchor="middle" font-size="3" fill="'+this.colors['Isquiotibiales']+'" font-weight="700">ISQUIOS</text>':''}
+${s('Tríceps')?'<text x="16" y="70" font-size="3.5" fill="'+this.colors['Tríceps']+'" font-weight="700">TRI</text>':''}
+</svg>`;
+    },
+
+
+    // ===== EXERCISE GIF/VIDEO SYSTEM =====
+    // Uses free exercise GIF sources for animated demonstrations
+    getExerciseMedia(exerciseId) {
+        // Map exercise IDs to free GIF/image URLs from public sources
+        const mediaMap = {
+            'bench-press': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Barbell-Bench-Press.gif',
+            'incline-db-press': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Incline-Dumbbell-Press.gif',
+            'squat': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/BARBELL-SQUAT.gif',
+            'deadlift': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Barbell-Deadlift.gif',
+            'pull-ups': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Pull-up.gif',
+            'barbell-row': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Barbell-Bent-Over-Row.gif',
+            'ohp': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Barbell-Overhead-Press.gif',
+            'lateral-raise': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Dumbbell-Lateral-Raise.gif',
+            'barbell-curl': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Barbell-Curl.gif',
+            'hammer-curl': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Hammer-Curl.gif',
+            'tricep-pushdown': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Pushdown.gif',
+            'skull-crusher': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Lying-Triceps-Extension.gif',
+            'leg-press': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Leg-Press.gif',
+            'leg-extension': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/LEG-EXTENSION.gif',
+            'lying-leg-curl': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Lying-Leg-Curl.gif',
+            'romanian-deadlift': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Barbell-Romanian-Deadlift.gif',
+            'hip-thrust': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Barbell-Hip-Thrust.gif',
+            'cable-fly-low': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Low-Cable-Crossover.gif',
+            'lat-pulldown': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Lat-Pulldown.gif',
+            'seated-cable-row': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Seated-Cable-Row.gif',
+            'face-pulls': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Face-Pull.gif',
+            'dips': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Triceps-Dip.gif',
+            'bulgarian-split': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Bulgarian-Split-Squat.gif',
+            'hanging-leg-raise': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Hanging-Leg-Raise.gif',
+            'cable-crunch': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Cable-Crunch.gif',
+            'incline-curl': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Incline-Dumbbell-Curl.gif',
+            'preacher-curl': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Barbell-Preacher-Curl.gif',
+            'overhead-cable-ext': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Overhead-Triceps-Extension.gif',
+            'close-grip-bench': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Close-Grip-Bench-Press.gif',
+            'hack-squat': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Hack-Squat.gif',
+            'standing-calf-raise': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Standing-Calf-Raise.gif',
+            'seated-calf-raise': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Seated-Calf-Raise.gif',
+            'db-shoulder-press': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Dumbbell-Shoulder-Press.gif',
+            'rear-delt-fly': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Rear-Delt-Fly.gif',
+            'pec-deck': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Pec-Deck-Fly.gif',
+            'cable-lateral-raise': 'https://fitnessprogramer.com/wp-content/uploads/2021/06/One-Arm-Cable-Lateral-Raise.gif',
+            'push-ups': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Push-Up.gif',
+            'plank': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Front-Plank.gif',
+            'walking-lunge': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Dumbbell-Walking-Lunge.gif',
+            'front-squat': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Barbell-Front-Squat.gif',
+            'good-morning': 'https://fitnessprogramer.com/wp-content/uploads/2021/02/Good-Morning.gif',
         };
-        return illustrations[exerciseId] || this.drawGenericExercise(exerciseId);
+        return mediaMap[exerciseId] || null;
     },
 
-    // Helper: draw a stick figure
-    figure(x, y, pose, scale = 1) {
-        // Base stick figure parts
-        const s = scale;
-        const head = `<circle cx="${x}" cy="${y}" r="${5*s}" fill="none" stroke="#B8B8D0" stroke-width="1.5"/>`;
-        return head;
-    },
-
-    drawBenchPress() {
-        return `<svg viewBox="0 0 200 120" class="exercise-illust">
-            <!-- Bench -->
-            <rect x="40" y="75" width="120" height="8" rx="3" fill="#444"/>
-            <rect x="55" y="83" width="8" height="25" fill="#555"/>
-            <rect x="137" y="83" width="8" height="25" fill="#555"/>
-            <!-- Person lying down -->
-            <circle cx="80" cy="62" r="8" fill="none" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="80" y1="70" x2="80" y2="74" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="80" y1="74" x2="60" y2="74" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="80" y1="74" x2="140" y2="74" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="140" y1="74" x2="145" y2="90" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="60" y1="74" x2="55" y2="90" stroke="#B8B8D0" stroke-width="2"/>
-            <!-- Arms pushing bar up -->
-            <line x1="90" y1="72" x2="90" y2="45" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="110" y1="72" x2="110" y2="45" stroke="#B8B8D0" stroke-width="2"/>
-            <!-- Barbell -->
-            <line x1="50" y1="45" x2="150" y2="45" stroke="#6C63FF" stroke-width="3"/>
-            <circle cx="50" cy="45" r="6" fill="#6C63FF" opacity="0.6"/>
-            <circle cx="150" cy="45" r="6" fill="#6C63FF" opacity="0.6"/>
-            <!-- Arrow showing movement -->
-            <path d="M 100 38 L 100 28 L 95 33 M 100 28 L 105 33" stroke="#4ECDC4" stroke-width="1.5" fill="none"/>
-            <text x="100" y="22" text-anchor="middle" font-size="8" fill="#4ECDC4">EMPUJA</text>
-        </svg>`;
-    },
-
-    drawSquat() {
-        return `<svg viewBox="0 0 200 140" class="exercise-illust">
-            <!-- Person in squat position -->
-            <circle cx="100" cy="30" r="8" fill="none" stroke="#B8B8D0" stroke-width="2"/>
-            <!-- Torso (slightly forward) -->
-            <line x1="100" y1="38" x2="95" y2="70" stroke="#B8B8D0" stroke-width="2"/>
-            <!-- Thighs (parallel) -->
-            <line x1="95" y1="70" x2="75" y2="95" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="95" y1="70" x2="115" y2="95" stroke="#B8B8D0" stroke-width="2"/>
-            <!-- Shins -->
-            <line x1="75" y1="95" x2="80" y2="125" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="115" y1="95" x2="110" y2="125" stroke="#B8B8D0" stroke-width="2"/>
-            <!-- Arms holding bar on back -->
-            <line x1="100" y1="42" x2="70" y2="38" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="100" y1="42" x2="130" y2="38" stroke="#B8B8D0" stroke-width="2"/>
-            <!-- Barbell on back -->
-            <line x1="60" y1="38" x2="140" y2="38" stroke="#6C63FF" stroke-width="3"/>
-            <circle cx="60" cy="38" r="5" fill="#6C63FF" opacity="0.6"/>
-            <circle cx="140" cy="38" r="5" fill="#6C63FF" opacity="0.6"/>
-            <!-- Arrows -->
-            <path d="M 55 85 L 55 65 L 50 70 M 55 65 L 60 70" stroke="#4ECDC4" stroke-width="1.5" fill="none"/>
-            <text x="45" y="60" font-size="7" fill="#4ECDC4">SUBE</text>
-            <!-- Depth line -->
-            <line x1="65" y1="95" x2="125" y2="95" stroke="#FF6B6B" stroke-width="0.5" stroke-dasharray="3,3"/>
-            <text x="130" y="98" font-size="6" fill="#FF6B6B">paralelo</text>
-        </svg>`;
-    },
-
-
-    drawDeadlift() {
-        return `<svg viewBox="0 0 200 140" class="exercise-illust">
-            <circle cx="100" cy="35" r="8" fill="none" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="100" y1="43" x2="95" y2="75" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="95" y1="75" x2="80" y2="105" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="95" y1="75" x2="110" y2="105" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="80" y1="105" x2="80" y2="130" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="110" y1="105" x2="110" y2="130" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="100" y1="50" x2="80" y2="75" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="100" y1="50" x2="120" y2="75" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="60" y1="120" x2="140" y2="120" stroke="#6C63FF" stroke-width="3"/>
-            <circle cx="60" cy="120" r="6" fill="#6C63FF" opacity="0.6"/>
-            <circle cx="140" cy="120" r="6" fill="#6C63FF" opacity="0.6"/>
-            <path d="M 145 80 L 145 55 L 140 60 M 145 55 L 150 60" stroke="#4ECDC4" stroke-width="1.5" fill="none"/>
-            <text x="148" y="50" font-size="7" fill="#4ECDC4">EMPUJA</text>
-            <text x="148" y="58" font-size="6" fill="#4ECDC4">el suelo</text>
-            <text x="60" y="48" font-size="6" fill="#FF6B6B">Espalda</text>
-            <text x="60" y="56" font-size="6" fill="#FF6B6B">NEUTRA</text>
-        </svg>`;
-    },
-
-    drawPullUps() {
-        return `<svg viewBox="0 0 200 140" class="exercise-illust">
-            <line x1="40" y1="15" x2="160" y2="15" stroke="#555" stroke-width="4"/>
-            <circle cx="100" cy="40" r="8" fill="none" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="100" y1="48" x2="100" y2="85" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="100" y1="85" x2="90" y2="120" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="100" y1="85" x2="110" y2="120" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="100" y1="55" x2="80" y2="18" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="100" y1="55" x2="120" y2="18" stroke="#B8B8D0" stroke-width="2"/>
-            <circle cx="80" cy="16" r="3" fill="#6C63FF"/>
-            <circle cx="120" cy="16" r="3" fill="#6C63FF"/>
-            <path d="M 60 70 L 60 45 L 55 50 M 60 45 L 65 50" stroke="#4ECDC4" stroke-width="1.5" fill="none"/>
-            <text x="40" y="40" font-size="7" fill="#4ECDC4">TIRA</text>
-            <text x="130" y="55" font-size="6" fill="#FF6B6B">Retrae</text>
-            <text x="130" y="63" font-size="6" fill="#FF6B6B">escápulas</text>
-        </svg>`;
-    },
-
-    drawOHP() {
-        return `<svg viewBox="0 0 200 140" class="exercise-illust">
-            <circle cx="100" cy="50" r="8" fill="none" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="100" y1="58" x2="100" y2="95" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="100" y1="95" x2="85" y2="130" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="100" y1="95" x2="115" y2="130" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="100" y1="65" x2="80" y2="30" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="100" y1="65" x2="120" y2="30" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="65" y1="28" x2="135" y2="28" stroke="#6C63FF" stroke-width="3"/>
-            <circle cx="65" cy="28" r="5" fill="#6C63FF" opacity="0.6"/>
-            <circle cx="135" cy="28" r="5" fill="#6C63FF" opacity="0.6"/>
-            <path d="M 100 22 L 100 10 L 95 15 M 100 10 L 105 15" stroke="#4ECDC4" stroke-width="1.5" fill="none"/>
-            <text x="100" y="7" text-anchor="middle" font-size="7" fill="#4ECDC4">EMPUJA</text>
-        </svg>`;
-    },
-
-
-    drawInclinePress() {
-        return `<svg viewBox="0 0 200 120" class="exercise-illust">
-            <path d="M 50 90 L 80 50 L 140 50 L 140 90 Z" fill="#333" stroke="#555" stroke-width="1"/>
-            <circle cx="95" cy="42" r="7" fill="none" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="95" y1="49" x2="110" y2="70" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="95" y1="53" x2="85" y2="25" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="95" y1="53" x2="115" y2="25" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="70" y1="23" x2="140" y2="23" stroke="#6C63FF" stroke-width="3"/>
-            <circle cx="70" cy="23" r="4" fill="#6C63FF" opacity="0.6"/>
-            <circle cx="140" cy="23" r="4" fill="#6C63FF" opacity="0.6"/>
-            <text x="100" y="13" text-anchor="middle" font-size="7" fill="#4ECDC4">30° inclinación</text>
-            <text x="150" y="55" font-size="6" fill="#FF6B6B">Pecho</text>
-            <text x="150" y="63" font-size="6" fill="#FF6B6B">superior</text>
-        </svg>`;
-    },
-
-    drawLateralRaise() {
-        return `<svg viewBox="0 0 200 130" class="exercise-illust">
-            <circle cx="100" cy="25" r="8" fill="none" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="100" y1="33" x2="100" y2="80" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="100" y1="80" x2="90" y2="120" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="100" y1="80" x2="110" y2="120" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="100" y1="45" x2="60" y2="45" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="100" y1="45" x2="140" y2="45" stroke="#B8B8D0" stroke-width="2"/>
-            <circle cx="60" cy="45" r="4" fill="#6C63FF"/>
-            <circle cx="140" cy="45" r="4" fill="#6C63FF"/>
-            <path d="M 55 55 Q 55 30 75 25" stroke="#4ECDC4" stroke-width="1.2" fill="none" stroke-dasharray="3,2"/>
-            <path d="M 145 55 Q 145 30 125 25" stroke="#4ECDC4" stroke-width="1.2" fill="none" stroke-dasharray="3,2"/>
-            <text x="30" y="20" font-size="7" fill="#4ECDC4">75-80°</text>
-            <text x="100" y="100" text-anchor="middle" font-size="6" fill="#FF6B6B">NO subas trapecios</text>
-        </svg>`;
-    },
-
-    drawBarbellCurl() {
-        return `<svg viewBox="0 0 200 130" class="exercise-illust">
-            <circle cx="100" cy="20" r="8" fill="none" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="100" y1="28" x2="100" y2="75" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="100" y1="75" x2="90" y2="120" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="100" y1="75" x2="110" y2="120" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="100" y1="42" x2="85" y2="55" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="85" y1="55" x2="85" y2="42" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="100" y1="42" x2="115" y2="55" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="115" y1="55" x2="115" y2="42" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="70" y1="40" x2="130" y2="40" stroke="#6C63FF" stroke-width="3"/>
-            <circle cx="70" cy="40" r="4" fill="#6C63FF" opacity="0.6"/>
-            <circle cx="130" cy="40" r="4" fill="#6C63FF" opacity="0.6"/>
-            <text x="140" y="50" font-size="6" fill="#FF6B6B">Codos</text>
-            <text x="140" y="58" font-size="6" fill="#FF6B6B">FIJOS</text>
-            <path d="M 75 65 Q 75 35 85 30" stroke="#4ECDC4" stroke-width="1.2" fill="none"/>
-            <text x="50" y="30" font-size="7" fill="#4ECDC4">↑ Curl</text>
-        </svg>`;
-    },
-
-    drawTricepPushdown() {
-        return `<svg viewBox="0 0 200 130" class="exercise-illust">
-            <rect x="95" y="5" width="10" height="8" fill="#555"/>
-            <line x1="100" y1="13" x2="100" y2="50" stroke="#555" stroke-width="1.5"/>
-            <circle cx="100" cy="35" r="8" fill="none" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="100" y1="43" x2="100" y2="85" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="100" y1="85" x2="90" y2="120" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="100" y1="85" x2="110" y2="120" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="100" y1="55" x2="90" y2="55" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="90" y1="55" x2="90" y2="80" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="100" y1="55" x2="110" y2="55" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="110" y1="55" x2="110" y2="80" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="85" y1="50" x2="85" y2="80" stroke="#6C63FF" stroke-width="2"/>
-            <path d="M 75 60 L 75 80 L 70 75 M 75 80 L 80 75" stroke="#4ECDC4" stroke-width="1.5" fill="none"/>
-            <text x="55" y="85" font-size="7" fill="#4ECDC4">BAJA</text>
-            <text x="120" y="55" font-size="6" fill="#FF6B6B">Codos fijos</text>
-        </svg>`;
-    },
-
-    drawGenericExercise(exerciseId) {
-        const ex = EXERCISES_DB.find(e => e.id === exerciseId);
-        const muscle = ex ? ex.muscle : '';
-        const color = this.colors[muscle] || '#6C63FF';
-        return `<svg viewBox="0 0 200 120" class="exercise-illust">
-            <circle cx="100" cy="30" r="10" fill="none" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="100" y1="40" x2="100" y2="80" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="100" y1="80" x2="80" y2="110" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="100" y1="80" x2="120" y2="110" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="100" y1="55" x2="70" y2="45" stroke="#B8B8D0" stroke-width="2"/>
-            <line x1="100" y1="55" x2="130" y2="45" stroke="#B8B8D0" stroke-width="2"/>
-            <circle cx="100" cy="65" r="12" fill="${color}" opacity="0.3" stroke="${color}" stroke-width="1"/>
-            <text x="100" y="69" text-anchor="middle" font-size="7" fill="${color}">${muscle}</text>
-        </svg>`;
-    },
-
-    drawLegPress() { return this.drawGenericExercise('leg-press'); },
-    drawRDL() { return this.drawGenericExercise('romanian-deadlift'); },
-    drawHipThrust() { return this.drawGenericExercise('hip-thrust'); },
-    drawHangingLegRaise() { return this.drawGenericExercise('hanging-leg-raise'); },
-    drawCableFly() { return this.drawGenericExercise('cable-fly-low'); },
-    drawFacePulls() { return this.drawGenericExercise('face-pulls'); },
-    drawBarbellRow() { return this.drawGenericExercise('barbell-row'); },
-
-    // ===== ACTIONS =====
+    // Actions
     toggleMuscle(muscle) {
         const idx = this.selectedMuscles.indexOf(muscle);
         if (idx >= 0) this.selectedMuscles.splice(idx, 1);
         else this.selectedMuscles.push(muscle);
         this.rerender();
     },
-
     deselectMuscle(muscle) {
         const idx = this.selectedMuscles.indexOf(muscle);
         if (idx >= 0) this.selectedMuscles.splice(idx, 1);
         this.rerender();
     },
-
     clearSelection() { this.selectedMuscles = []; this.rerender(); },
-
-    setView(view) { this.view = view; this.rerender(); },
-
     confirmSelection() {
-        if (this.selectedMuscles.length > 0) {
-            ExercisesPage.filterByMuscles(this.selectedMuscles);
-        }
+        if (this.selectedMuscles.length > 0) ExercisesPage.filterByMuscles(this.selectedMuscles);
     },
-
     getExercisesForSelected() {
         if (this.selectedMuscles.length === 0) return [];
-        return EXERCISES_DB.filter(ex => 
-            this.selectedMuscles.includes(ex.muscle) || 
+        return EXERCISES_DB.filter(ex =>
+            this.selectedMuscles.includes(ex.muscle) ||
             (ex.secondary && ex.secondary.some(s => this.selectedMuscles.includes(s)))
         );
     },
-
     rerender() {
-        const container = document.getElementById('body-map-wrapper');
-        if (container) container.innerHTML = this.render({ selectable: this.selectableMode !== false });
+        const c = document.getElementById('body-map-wrapper');
+        if (c) c.innerHTML = this.render({ selectable: true });
     }
 };
