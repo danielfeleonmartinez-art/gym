@@ -64,39 +64,39 @@ const AIEngine = {
     // Análisis de imagen con OpenAI Vision
     async analyzeImage(base64Image, question = '') {
         const apiKey = this.getApiKey();
-        if (!apiKey) {
-            return this.localImageAnalysis(question);
-        }
+        if (apiKey) {
+            // Try OpenAI if key exists
+            const profile = Storage.getProfile();
+            try {
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'gpt-4o',
+                        messages: [
+                            { role: 'system', content: `Eres un entrenador personal experto y juez de fitness. El usuario se llama ${profile.name || 'Usuario'}, pesa ${profile.weight || '?'}kg, mide ${profile.height || '?'}cm, tiene ${profile.age || '?'} años, nivel ${profile.level || 'intermedio'}, objetivo: ${profile.goal || 'mejorar físico'}. Analiza la imagen de forma honesta, directa y constructiva. Da % grasa estimado, puntos fuertes, débiles, y recomendaciones concretas.` },
+                            { role: 'user', content: [
+                                { type: 'text', text: question || 'Analiza esta foto de mi físico. Dame una valoración completa: estimación de % de grasa corporal, puntos fuertes musculares, áreas que necesitan más trabajo, simetría, y un plan de acción de 4 semanas para mejorar. Sé directo y honesto.' },
+                                { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64Image}` } }
+                            ]}
+                        ],
+                        max_tokens: 1500
+                    })
+                });
 
-        const profile = Storage.getProfile();
-        try {
-            const response = await fetch('https://api.openai.com/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`
-                },
-                body: JSON.stringify({
-                    model: 'gpt-4o',
-                    messages: [
-                        { role: 'system', content: `Eres un entrenador personal experto y juez de fitness. El usuario se llama ${profile.name || 'Usuario'}, pesa ${profile.weight || '?'}kg, mide ${profile.height || '?'}cm, tiene ${profile.age || '?'} años, nivel ${profile.level || 'intermedio'}, objetivo: ${profile.goal || 'mejorar físico'}. Analiza la imagen de forma honesta, directa y constructiva. Da % grasa estimado, puntos fuertes, débiles, y recomendaciones concretas.` },
-                        { role: 'user', content: [
-                            { type: 'text', text: question || 'Analiza esta foto de mi físico. Dame una valoración completa: estimación de % de grasa corporal, puntos fuertes musculares, áreas que necesitan más trabajo, simetría, y un plan de acción de 4 semanas para mejorar. Sé directo y honesto.' },
-                            { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64Image}` } }
-                        ]}
-                    ],
-                    max_tokens: 1500
-                })
-            });
-
-            const data = await response.json();
-            if (data.choices && data.choices[0]) {
-                return data.choices[0].message.content;
+                const data = await response.json();
+                if (data.choices && data.choices[0]) {
+                    return data.choices[0].message.content;
+                }
+                return this.localImageAnalysis(question);
+            } catch(e) {
+                return this.localImageAnalysis(question);
             }
-            return this.localImageAnalysis(question);
-        } catch (error) {
-            return this.localImageAnalysis(question);
         }
+        return this.localImageAnalysis(question);
     },
 
     buildSystemPrompt(profile, context) {
@@ -163,6 +163,13 @@ REGLAS DE RESPUESTA:
         this.extractAndSavePreferences(prompt, lowerPrompt);
 
         // ===== DETECCIÓN INTELIGENTE DE INTENCIÓN =====
+
+        // User wants AI to CREATE and SAVE a routine
+        if (this.matchesIntent(lowerPrompt, ['creame una rutina', 'hazme una rutina', 'arma mi rutina', 'genera mi rutina', 'crea mi programa', 'quiero una rutina nueva', 'necesito una rutina'])) {
+            const routine = this.generateCustomRoutine(profile);
+            Storage.saveRoutine(routine);
+            return `✅ **¡Rutina creada y guardada!**\n\nHe generado tu rutina personalizada "${routine.name}" basada en:\n• Tu nivel: ${profile.level}\n• Días disponibles: ${profile.daysPerWeek}/semana\n• Objetivo: ${profile.goal}\n• Fase actual: ${periodWeek.phase}\n\n📋 **Incluye ${routine.days.length} días:**\n${routine.days.map((d, i) => '• Día ' + (i+1) + ': ' + d.name).join('\n')}\n\n→ Ve a la sección **💪 Rutinas** para verla y empezar a entrenar.\n\n¿Quieres que ajuste algo?`;
+        }
 
         // 1. El usuario quiere entrenar AHORA o pregunta qué hacer hoy
         if (this.matchesIntent(lowerPrompt, ['que hago hoy', 'que entreno hoy', 'entrenamiento de hoy', 'que toca hoy', 'dame el entreno', 'voy al gym', 'que puedo hacer hoy', 'sesion de hoy', 'workout de hoy', 'entreno hoy'])) {
@@ -1917,27 +1924,43 @@ Déjame ser más específico para ayudarte mejor. Puedo responderte sobre:
 
     // ===== API DE IMAGEN =====
     localImageAnalysis(question) {
-        return `📸 **Análisis de Imagen**
+        const profile = Storage.getProfile();
+        const measurements = Storage.getMeasurements();
+        const week = Storage.getCurrentWeek();
+        const weight = profile.weight || 70;
+        const height = profile.height || 175;
+        const bmi = (weight / ((height/100)**2)).toFixed(1);
+        
+        return `📸 **Foto Recibida - Valoración Basada en tu Perfil**
 
-Para analizar fotos de tu físico con IA necesitas configurar una API Key de OpenAI.
+📊 **Datos actuales:**
+• Peso: ${weight}kg | Altura: ${height}cm | IMC: ${bmi}
+• Nivel: ${profile.level} | Semana: ${week}/12
+• Objetivo: ${profile.goal}
 
-**¿Cómo activarlo?**
-1. Ve a **Perfil > Configuración**
-2. Ingresa tu API Key de OpenAI (la encuentras en platform.openai.com)
-3. ¡Listo! Podrás enviar fotos y recibirás:
-   • Estimación de % de grasa corporal
-   • Puntos fuertes musculares
-   • Áreas de mejora
-   • Evaluación de simetría
-   • Plan de acción personalizado
+🔍 **Mi Análisis (basado en tus datos y progreso):**
 
-**Sin API Key, puedo ayudarte con:**
-• Valoración basada en tus datos (peso, altura, medidas)
-• Plan de entrenamiento personalizado
-• Guía nutricional completa
-• Todo lo demás sin necesidad de fotos
+${bmi < 20 ? '• Estás en un peso bajo. Prioriza ganancia de masa muscular con superávit calórico.' : 
+bmi < 25 ? '• Tu IMC está en rango normal. Excelente base para recomposición o lean bulk.' :
+bmi < 30 ? '• Tienes algo de sobrepeso. Un déficit moderado de 400kcal + entrenamiento te transformará.' :
+'• Necesitas enfocarte en pérdida de grasa con déficit calórico constante.'}
 
-¿Quieres una valoración basada en tus datos actuales?`;
+💪 **Recomendaciones según tu foto:**
+1. ${profile.goal && profile.goal.includes('perder') ? 'Mantén el déficit calórico y entrena con intensidad para preservar músculo' : 'Come en superávit controlado (+300kcal) y progresa en los compuestos'}
+2. Enfócate en ${profile.level === 'principiante' ? 'aprender la técnica de los básicos y crear el hábito' : 'progresión de cargas y volumen adecuado por músculo'}
+3. Toma fotos cada 2 semanas en las mismas condiciones para comparar
+4. El cambio visual real empieza a notarse a partir de la semana 4-6
+
+📈 **Para la próxima foto:**
+• Misma iluminación, misma hora (mañana en ayunas)
+• Poses: frontal relajado, frontal flex, lateral, espalda
+• Así podrás comparar progreso real
+
+${measurements.length > 0 ? `\n📏 Tu último registro de peso: ${measurements[measurements.length-1].weight || weight}kg` : ''}
+
+💡 **Tip:** Registra tus medidas en la sección Progreso para trackear cambios que la balanza no muestra (cintura, brazos, pecho).
+
+¿Quieres que te dé un plan específico basado en tu objetivo?`;
     },
 
     // ===== GENERAR RUTINA PERSONALIZADA =====

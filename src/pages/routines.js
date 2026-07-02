@@ -300,6 +300,22 @@ const RoutinesPage = {
         RoutineBuilder.open();
     },
 
+    generateMuscleRoutine(muscle) {
+        const exercises = EXERCISES_DB.filter(e => e.muscle === muscle).slice(0, 6);
+        if (exercises.length === 0) return;
+        const routine = {
+            id: Helpers.generateId(),
+            name: `Rutina de ${muscle}`,
+            description: `Rutina enfocada en ${muscle} - Generada por IA`,
+            days: [{ name: muscle, exercises: exercises.map(e => e.id) }],
+            createdAt: new Date().toISOString()
+        };
+        Storage.saveRoutine(routine);
+        document.getElementById('onboarding-modal').classList.add('hidden');
+        Helpers.showToast(`✅ Rutina de ${muscle} creada!`);
+        App.renderCurrentPage();
+    },
+
     // Execution
     startExecution(routineId, dayIndex) {
         const routines = Storage.getRoutines();

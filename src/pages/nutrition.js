@@ -118,6 +118,18 @@ const NutritionPage = {
                     `).join('')}
                 </div>
             </div>
+
+            <!-- Calories Burned Today -->
+            <div class="card mt-3">
+                <div class="flex justify-between items-center">
+                    <span class="card-title">🔥 Calorías Quemadas Hoy</span>
+                    <span style="font-weight: 700; color: var(--secondary);">${this.getCaloriesBurned()} kcal</span>
+                </div>
+                <div class="progress-bar mt-1" style="height: 8px;">
+                    <div class="progress-fill" style="width: ${Math.min(this.getCaloriesBurned() / 500 * 100, 100)}%; background: var(--secondary);"></div>
+                </div>
+                <p class="text-muted mt-1" style="font-size: 0.7rem;">Basado en tus entrenamientos registrados hoy</p>
+            </div>
         `;
     },
 
@@ -255,6 +267,14 @@ const NutritionPage = {
     getWaterCount() {
         const key = 'water_' + new Date().toISOString().split('T')[0];
         return parseInt(localStorage.getItem(key)) || 0;
+    },
+
+    getCaloriesBurned() {
+        const workouts = Storage.getWorkoutHistory();
+        const today = new Date().toDateString();
+        const todayWorkouts = workouts.filter(w => new Date(w.date).toDateString() === today);
+        // Estimate: ~5 kcal per minute of training
+        return todayWorkouts.reduce((sum, w) => sum + ((w.duration || 0) * 5), 0);
     },
 
     addWater() {

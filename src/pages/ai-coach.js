@@ -66,7 +66,7 @@ const AICoachPage = {
             </div>
 
             <!-- Hidden file input -->
-            <input type="file" id="photo-input" accept="image/*" style="display:none" onchange="AICoachPage.handlePhoto(event)">
+            <input type="file" id="photo-input" accept="image/*" capture="environment" style="display:none" onchange="AICoachPage.handlePhoto(event)">
         </div>`;
     },
 

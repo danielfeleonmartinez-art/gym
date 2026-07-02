@@ -65,6 +65,7 @@ const App = {
             case 'exercises': html = ExercisesPage.render(); break;
             case 'ai-coach': html = AICoachPage.render(); break;
             case 'progress': html = ProgressPage.render(); break;
+            case 'assessment': html = AssessmentPage.render(); break;
             case 'nutrition': html = NutritionPage.render(); break;
             case 'goals': html = GoalsPage.render(); break;
             case 'profile': html = ProfilePage.render(); break;
