@@ -1005,3 +1005,125 @@
         max-width: 200px;
     }
 }
+
+
+/* ===== CALENDAR ===== */
+.calendar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.calendar-month {
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+}
+
+.calendar-day-names {
+    margin-bottom: 0.5rem;
+}
+
+.cal-day-name {
+    text-align: center;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+.cal-day {
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    position: relative;
+    background: var(--bg-card);
+    border: 1px solid transparent;
+}
+
+.cal-day:hover { border-color: var(--primary); }
+.cal-day.empty { background: none; cursor: default; }
+.cal-day.today { border: 2px solid var(--primary); font-weight: 700; }
+.cal-day.selected { background: var(--primary); color: white; }
+.cal-day.workout { background: rgba(46, 204, 113, 0.2); border-color: var(--success); }
+.cal-day.missed { opacity: 0.4; }
+
+.cal-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    position: absolute;
+    bottom: 3px;
+}
+
+.workout-dot { background: var(--success); }
+.goal-dot { background: var(--primary); left: calc(50% + 3px); }
+
+/* ===== MILESTONES ===== */
+.milestones-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+}
+
+.milestone-card {
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    padding: 1rem;
+    text-align: center;
+    border: 1px solid var(--border);
+    transition: var(--transition);
+}
+
+.milestone-card.unlocked {
+    border-color: var(--warning);
+    background: rgba(243, 156, 18, 0.05);
+}
+
+.milestone-card.locked {
+    opacity: 0.5;
+}
+
+.milestone-icon {
+    font-size: 1.8rem;
+    display: block;
+    margin-bottom: 0.3rem;
+}
+
+.milestone-name {
+    font-size: 0.8rem;
+    font-weight: 700;
+    display: block;
+}
+
+.milestone-desc {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    display: block;
+    margin-top: 0.2rem;
+}
+
+.milestone-date {
+    font-size: 0.6rem;
+    color: var(--warning);
+    display: block;
+    margin-top: 0.3rem;
+}
+
+/* ===== GOAL COMPLETED ===== */
+.goal-completed {
+    border-color: var(--success) !important;
+}

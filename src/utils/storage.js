@@ -202,5 +202,36 @@ const Storage = {
 
     setUserPreferences(prefs) {
         return this.set('userPreferences', prefs);
+    },
+
+    // Goals
+    getGoals() {
+        return this.get('goals') || [];
+    },
+
+    addGoal(goal) {
+        const goals = this.getGoals();
+        goals.push(goal);
+        return this.set('goals', goals);
+    },
+
+    updateGoalProgress(goalId, value) {
+        const goals = this.getGoals();
+        const goal = goals.find(g => g.id === goalId);
+        if (goal) {
+            goal.currentProgress = value;
+            if (goal.target && value >= goal.target) goal.completed = true;
+            this.set('goals', goals);
+        }
+    },
+
+    completeGoal(goalId) {
+        const goals = this.getGoals();
+        const goal = goals.find(g => g.id === goalId);
+        if (goal) {
+            goal.completed = true;
+            goal.completedAt = new Date().toISOString();
+            this.set('goals', goals);
+        }
     }
 };
