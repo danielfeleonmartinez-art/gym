@@ -159,6 +159,12 @@ REGLAS DE RESPUESTA:
         const periodWeek = PERIODIZATION.weeks[week - 1] || PERIODIZATION.weeks[0];
         const prefs = Storage.getUserPreferences();
 
+        // ===== FILTRO DE CONTENIDO - Bloquea contenido sexual/ilegal =====
+        const blockedWords = ['sexo', 'sexual', 'porno', 'desnud', 'drogas ilegales', 'esteroides ilegales', 'matar', 'suicid', 'arma', 'bomba', 'hackear', 'robar', 'violencia', 'xxx', 'onlyfans'];
+        if (blockedWords.some(word => lowerPrompt.includes(word))) {
+            return `⚠️ **No puedo ayudarte con eso.**\n\nSoy tu coach de fitness y solo puedo hablar sobre:\n• 💪 Entrenamiento y ejercicios\n• 🥗 Nutrición y dietas\n• 📊 Progreso físico\n• 😴 Descanso y recuperación\n• 💊 Suplementación legal\n• 🎯 Metas y motivación\n\n¿En qué puedo ayudarte dentro del fitness?`;
+        }
+
         // Guardar preferencias si el usuario las indica
         this.extractAndSavePreferences(prompt, lowerPrompt);
 
@@ -1891,35 +1897,58 @@ Solo dime qué necesitas. Estoy para que logres tu mejor versión. 🔥`;
     },
 
     generateContextualResponse(prompt, lowerPrompt, profile, periodWeek) {
-        // Si no matchea nada específico, dar una respuesta inteligente basada en contexto
+        // ===== RESPUESTA INTELIGENTE A CUALQUIER PREGUNTA =====
         const week = Storage.getCurrentWeek();
+        const weight = profile.weight || 70;
+        const name = profile.name || 'crack';
 
-        return `💬 Entiendo tu pregunta, ${profile.name || 'crack'}.
+        // Preguntas sobre tiempo/frecuencia
+        if (lowerPrompt.includes('cuanto tiempo') || lowerPrompt.includes('cuantas veces') || lowerPrompt.includes('cuantos dias')) {
+            return `⏱️ **Sobre tiempo y frecuencia, ${name}:**\n\n• **Entreno:** ${profile.daysPerWeek || 4} días/semana es lo ideal para ti\n• **Duración por sesión:** 45-75 minutos (más no es mejor)\n• **Descanso entre sesiones:** Mínimo 48h para el mismo músculo\n• **Para ver resultados:** 4-6 semanas de consistencia mínimo\n• **Para transformación real:** 12-16 semanas (tu programa es de 12)\n\n¿Quieres más detalles sobre algo específico?`;
+        }
 
-Déjame ser más específico para ayudarte mejor. Puedo responderte sobre:
+        // Preguntas tipo "es verdad que" o mitos
+        if (lowerPrompt.includes('es verdad') || lowerPrompt.includes('es cierto') || lowerPrompt.includes('mito') || lowerPrompt.includes('sirve')) {
+            return `🔬 **Sobre tu pregunta, ${name}:**\n\nDéjame darte la respuesta basada en ciencia:\n\n**Mitos comunes del fitness (la verdad):**\n• "Sudar = quemar grasa" → FALSO. El sudor es termorregulación, no quema de grasa.\n• "Las mujeres se ponen enormes con pesas" → FALSO. No tienen testosterona suficiente.\n• "Hay que comer cada 3 horas" → FALSO. Lo que importa es el total diario.\n• "El cardio quema músculo" → PARCIAL. Solo si es excesivo sin proteína.\n• "No comer de noche engorda" → FALSO. Importa el total calórico del día.\n• "Los abdominales se hacen en la cocina" → VERDAD. Necesitas bajo % grasa para verlos.\n• "La creatina es mala/peligrosa" → FALSO. Es el suplemento más seguro y estudiado.\n\n¿Tu pregunta específica es sobre alguno de estos o algo diferente?`;
+        }
 
-🏋️ **Entrenamiento:**
-• "¿Qué hago hoy?" → Te doy la sesión completa
-• "Quiero entrenar [músculo]" → Sesión personalizada
-• "¿Cuál es el mejor ejercicio para X?" → Ranking con ciencia
-• "Estoy estancado" → Plan para romper el plateau
+        // Preguntas sobre agua/hidratación
+        if (lowerPrompt.includes('agua') || lowerPrompt.includes('hidrat') || lowerPrompt.includes('beber') || lowerPrompt.includes('liquido')) {
+            return `💧 **Hidratación para ${name} (${weight}kg):**\n\n• **Mínimo diario:** ${Math.round(weight * 0.035)}L (${Math.round(weight * 35)}ml)\n• **Días de entreno:** +500ml-1L extra\n• **Si sudas mucho:** +1L adicional\n\n**Señales de deshidratación:**\n• Orina amarilla oscura\n• Fatiga durante entreno\n• Dolor de cabeza\n• Calambres\n\n**Tips:**\n• Bebe antes de sentir sed\n• Lleva botella al gym siempre\n• Bebe 500ml al despertar\n• Electrolitos si entrenas >90min\n\n💡 La hidratación afecta DIRECTAMENTE tu rendimiento. Un 2% de deshidratación = -10% de fuerza.`;
+        }
 
-🥗 **Nutrición:**
-• "¿Qué como?" → Plan de macros personalizado
-• "Dame ideas de desayuno/almuerzo/cena" → Recetas concretas
-• "¿Cuántas calorías necesito?" → Cálculo preciso
+        // Preguntas sobre peso/báscula
+        if (lowerPrompt.includes('peso') || lowerPrompt.includes('bascula') || lowerPrompt.includes('balanza') || lowerPrompt.includes('pesarme') || lowerPrompt.includes('subi') || lowerPrompt.includes('baje')) {
+            return `⚖️ **Sobre el peso, ${name}:**\n\n**Tu peso actual:** ${weight}kg\n\n**Importante entender:**\n• El peso fluctúa 1-3kg/día (agua, comida, sodio, estrés)\n• NO te peses todos los días y saques conclusiones\n• Pésate 3x/semana EN AYUNAS y saca el PROMEDIO semanal\n• Solo el promedio semanal importa, no el día a día\n\n**¿Subiste de peso?**\n• Si comes en superávit: es normal (+0.25-0.5kg/semana MAX es muscle)\n• Si subiste 1-2kg de un día a otro: es AGUA, no grasa\n• Después de día libre/cheat: sube 1-3kg de agua (se va en 2-3 días)\n\n**¿Bajaste de peso?**\n• -0.5 a 1kg/semana en déficit = perfecto\n• Si bajas más rápido: puedes perder músculo\n• Si no bajas: reduce 200kcal más o añade cardio\n\n**Tu objetivo semanal:**\n${profile.goal && profile.goal.includes('perder') ? '• Perder 0.5-1kg/semana (no más para preservar músculo)' : '• Ganar 0.25-0.5kg/semana (más = mucha grasa)'}\n\n¿Algo más específico sobre tu peso?`;
+        }
 
-📊 **Progreso:**
-• "¿Cómo voy?" → Análisis de tu evolución
-• "Valórame" → Valoración física completa
-• "¿Cuándo voy a ver resultados?" → Timeline realista
+        // Preguntas sobre ropa/verse bien
+        if (lowerPrompt.includes('ropa') || lowerPrompt.includes('verse bien') || lowerPrompt.includes('verme bien') || lowerPrompt.includes('estetica') || lowerPrompt.includes('fisico') || lowerPrompt.includes('bonito') || lowerPrompt.includes('atractivo')) {
+            return `👔 **Cómo verte mejor físicamente, ${name}:**\n\n**Los músculos que más impacto visual tienen (orden):**\n1. 🟠 **Hombros anchos** → Lo #1 que te hace ver grande vestido\n2. 🔵 **Espalda ancha** → V-taper, presencia física\n3. 🔴 **Pecho desarrollado** → Se nota con camiseta\n4. 💗 **Brazos** → Lo que la gente mira primero\n5. 🟡 **Cintura estrecha** → Contraste con hombros = wow\n\n**El "secreto" para verse bien:**\n• Hombros anchos + cintura estrecha = el mejor físico posible\n• Prioriza: Laterales (hombros), Pull-ups (espalda), Press (pecho)\n• La grasa abdominal es el ENEMIGO #1 de la estética\n\n**Timeline:**\n• 4 semanas: ropa queda diferente\n• 8 semanas: TÚ notas el cambio\n• 12 semanas: los demás preguntan "¿qué hiciste?"\n\n¿Quieres un plan enfocado en estética?`;
+        }
 
-💡 **Dudas:**
-• "¿Es mejor A o B?" → Comparación con ciencia
-• "Me duele X" → Guía de manejo y alternativas
-• "Necesito motivación" → Te pongo las pilas 🔥
+        // Preguntas sobre ansiedad/estrés/bienestar mental
+        if (lowerPrompt.includes('ansiedad') || lowerPrompt.includes('estres') || lowerPrompt.includes('depres') || lowerPrompt.includes('triste') || lowerPrompt.includes('mental') || lowerPrompt.includes('animo')) {
+            return `🧠 **Fitness y Salud Mental, ${name}:**\n\nEl ejercicio es uno de los MEJORES antidepresivos naturales. La ciencia es clara:\n\n**Beneficios comprobados del ejercicio en salud mental:**\n• Libera endorfinas (la "droga de la felicidad")\n• Reduce cortisol (hormona del estrés) un 30-40%\n• Mejora calidad de sueño (fundamental para el ánimo)\n• Aumenta autoestima y confianza\n• Da estructura y propósito al día\n\n**Mi recomendación:**\n1. Entrena aunque no tengas ganas (5 min → el resto fluye)\n2. Prioriza pesas sobre cardio (más impacto en autoestima)\n3. Duerme 7-9h (sin sueño todo empeora)\n4. Camina 20-30min al aire libre (luz solar = serotonina)\n5. Come bien (la nutrición afecta MUCHO el estado mental)\n\n💡 El gym no solo transforma tu cuerpo, transforma tu MENTE.\n\n⚠️ Si sientes que necesitas ayuda profesional, no dudes en buscar un psicólogo. El gym complementa, pero no reemplaza la terapia profesional.\n\n¿Quieres que te arme un plan de entreno enfocado en bienestar?`;
+        }
 
-¿Qué te interesa? Cuanto más específico seas, mejor te puedo ayudar.`;
+        // Preguntas sobre principiantes
+        if (lowerPrompt.includes('empezar') || lowerPrompt.includes('comenzar') || lowerPrompt.includes('principiante') || lowerPrompt.includes('nuevo') || lowerPrompt.includes('primera vez') || lowerPrompt.includes('no se nada')) {
+            return `🌱 **Guía para Empezar, ${name}:**\n\n¡Bienvenido! Los principiantes tienen la MEJOR ventaja: los "noob gains". Tu cuerpo va a cambiar más rápido que nunca en los primeros meses.\n\n**Plan de las primeras 4 semanas:**\n\n1. **Frecuencia:** 3 días/semana (Lunes, Miércoles, Viernes)\n2. **Rutina:** Full Body (trabaja todo cada sesión)\n3. **Ejercicios básicos que aprender:**\n   • Sentadilla (piernas)\n   • Press de banca (pecho)\n   • Remo con barra (espalda)\n   • Press militar (hombros)\n   • Curl de bíceps\n   • Pushdown de tríceps\n\n4. **Nutrición simple:**\n   • Come ${Math.round(weight * 30)}kcal/día\n   • ${Math.round(weight * 1.8)}g de proteína/día\n   • Come verduras en cada comida\n\n5. **Reglas de oro:**\n   • NUNCA faltes 2 días seguidos\n   • Técnica > Peso (siempre)\n   • Progresa +2.5kg/semana en los básicos\n   • Duerme 7-9 horas\n\n💪 Dime "créame una rutina" y te genero una perfecta para principiantes.`;
+        }
+
+        // Preguntas sobre horarios/cuándo entrenar
+        if (lowerPrompt.includes('hora') || lowerPrompt.includes('manana') || lowerPrompt.includes('noche') || lowerPrompt.includes('cuando entrenar') || lowerPrompt.includes('mejor momento')) {
+            return `⏰ **¿Cuándo es mejor entrenar, ${name}?**\n\n**La verdad:** La MEJOR hora es la que puedas ser CONSISTENTE.\n\n**Pero si puedes elegir:**\n• **Mañana (6-10am):** Testosterona más alta, menos gente en gym\n• **Mediodía (11-14):** Cuerpo ya caliente, buenos niveles de energía\n• **Tarde (15-19):** Fuerza máxima (pico de rendimiento), reflejos mejores\n• **Noche (20-22):** Puede afectar sueño si es muy intenso\n\n**Mi recomendación para ti:**\n• Si tu objetivo es fuerza → tarde (4-7pm)\n• Si tu objetivo es perder grasa → mañana en ayunas (más quema)\n• Si solo puedes de noche → entrena de noche (es mejor que no entrenar)\n\n💡 **Lo que SÍ importa:**\n• Entrenar siempre a la misma hora (el cuerpo se adapta)\n• Comer 1-2h antes del entreno\n• No entrenar justo después de una comida pesada\n\n¿Necesitas que ajuste tu rutina a tu horario?`;
+        }
+
+        // Preguntas sobre alcohol
+        if (lowerPrompt.includes('alcohol') || lowerPrompt.includes('cerveza') || lowerPrompt.includes('trago') || lowerPrompt.includes('fiesta') || lowerPrompt.includes('beber')) {
+            return `🍺 **Alcohol y Fitness, ${name}:**\n\n**La realidad cruda:**\n• El alcohol REDUCE la síntesis proteica un 20-30%\n• Baja testosterona por 24-72h\n• Deshidrata (peor rendimiento)\n• Son calorías VACÍAS (7kcal/gramo)\n• Empeora calidad de sueño\n\n**¿Puedo tomar y aún tener resultados?**\nSí, pero con reglas:\n\n1. Máximo 1-2 tragos, 1-2 veces por semana\n2. NUNCA el día de entreno ni el día anterior a piernas/espalda\n3. Come proteína antes y después de beber\n4. Hidrátate mucho (1 vaso de agua por cada trago)\n5. Si te excedes: el día siguiente come normal (no ayunes)\n\n**Las "menos malas" opciones:**\n• Vodka + soda (bajo en calorías)\n• Vino tinto (antioxidantes)\n• Cerveza light\n\n**Las peores:**\n• Cócteles dulces (300-500kcal cada uno)\n• Cerveza regular (150-200kcal)\n\n💡 Si estás en un cut serio: 0 alcohol por 8-12 semanas acelera MUCHO los resultados.`;
+        }
+
+        // Si llegamos aquí, intentar dar una respuesta útil basada en el prompt
+        return `💬 **${name}, sobre tu pregunta:**\n\n"${prompt}"\n\nAunque no tengo una respuesta específica preprogramada para esto, te puedo ayudar con todo lo relacionado a:\n\n💪 **Entrenamiento** - Rutinas, ejercicios, técnica, progresión\n🥗 **Nutrición** - Macros, comidas, dietas, suplementos\n📊 **Progreso** - Valoración, análisis, comparación\n🎯 **Objetivos** - Planes con timeline, metas realistas\n😴 **Recuperación** - Sueño, descanso, manejo de lesiones\n🔬 **Ciencia** - Mitos vs realidad, estudios\n🧠 **Motivación** - Mentalidad, disciplina, hábitos\n\n**Prueba preguntarme cosas como:**\n• "¿Qué hago si no veo resultados?"\n• "¿Cuánta proteína necesito exactamente?"\n• "¿Cómo elimino la grasa del abdomen?"\n• "¿Es mejor cardio o pesas para bajar de peso?"\n• "Dame mi rutina de hoy"\n• "Créame una rutina nueva"\n\n¿En qué te puedo ayudar? 🔥`;
     },
 
     // ===== API DE IMAGEN =====
