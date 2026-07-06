@@ -145,7 +145,7 @@ const ScanPage = {
         const prefs = Storage.getUserPreferences();
         prefs.focusMuscles = this.selectedMuscles.join(', ');
         Storage.setUserPreferences(prefs);
-        if (typeof Helpers !== 'undefined') Helpers.showToast('Prioridades guardadas');
+        Helpers.showToast('Prioridades guardadas');
     },
 
     quickScan() {
@@ -267,14 +267,18 @@ const ScanPage = {
         const weakMuscles = this.scanResult ? this.scanResult.muscleRatings.filter(m => m.score < 55).map(m => m.name) : [];
         const prompt = `Basandote en este perfil: ${d.w}kg, ${d.h}cm, ${d.a} anos, IMC ${d.bmi}, grasa ~${this.scanResult?this.scanResult.bodyFat:'20'}%, nivel ${d.p.level||'intermedio'}, objetivo ${d.p.goal||'ganar musculo'}, musculos debiles: ${weakMuscles.join(', ')||'ninguno identificado'}. Dame un plan de 4 semanas con: 1) Los 5 mejores ejercicios especificos para los musculos debiles con series, reps y peso sugerido basado en ${d.w}kg de peso corporal. 2) Nutricion diaria con calorias y macros. 3) Cardio recomendado. Se muy especifico con nombres de ejercicios reales.`;
 
+        // Try AI response (will use local AI if no API key)
         try {
-            const result = await AIEngine.callGroq(prompt);
+            const result = await AIEngine.generateResponse(prompt);
             if (result) {
+                Storage.addChatMessage({ role: 'user', content: 'Genera un plan basado en mi scan corporal' });
                 Storage.addChatMessage({ role: 'ai', content: result });
                 App.navigate('ai-coach');
                 return;
             }
-        } catch(e) {}
+        } catch(e) {
+            console.error('Plan generation error:', e);
+        }
 
         // Fallback: generate routine directly
         this.generatePlan();
@@ -284,8 +288,14 @@ const ScanPage = {
         const profile = Storage.getProfile();
         const routine = AIEngine.generateCustomRoutine(profile);
         routine.name = 'Plan Post-Scan';
+        if (this.scanResult) {
+            const weakMuscles = this.scanResult.muscleRatings.filter(m => m.score < 55).map(m => m.name);
+            routine.description = weakMuscles.length > 0 
+                ? `Enfocado en: ${weakMuscles.join(', ')}`
+                : 'Rutina equilibrada basada en tu scan';
+        }
         Storage.saveRoutine(routine);
-        if (typeof Helpers !== 'undefined') Helpers.showToast('Rutina generada');
+        Helpers.showToast('Rutina generada desde tu scan!');
         App.navigate('routines');
     }
 };

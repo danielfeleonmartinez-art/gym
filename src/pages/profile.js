@@ -181,53 +181,63 @@ const ProfilePage = {
     renderSettings(settings) {
         return `
             <div class="card mb-2">
-                <h3 class="card-title mb-2">⚙️ Configuración</h3>
+                <h3 class="card-title mb-2">IA y API</h3>
 
                 <div class="form-group">
-                    <label class="form-label">🔑 API Key OpenAI (para IA avanzada)</label>
-                    <input type="password" class="form-input" id="setting-apikey" value="${settings.apiKey || ''}" placeholder="sk-...">
-                    <p class="text-muted" style="font-size: 0.7rem; margin-top: 0.3rem;">Opcional. Permite análisis de fotos y respuestas más inteligentes.</p>
+                    <label class="form-label">API Key de Groq (IA avanzada)</label>
+                    <input type="password" class="form-input" id="setting-apikey" value="${settings.apiKey || ''}" placeholder="gsk_...">
+                    <p class="text-muted" style="font-size: 0.7rem; margin-top: 0.3rem;">Opcional. Obtén tu key gratis en <a href="https://console.groq.com" target="_blank" style="color:var(--primary)">console.groq.com</a>. Sin key, la IA funciona con respuestas locales inteligentes.</p>
                 </div>
 
+                <button class="btn btn-primary btn-full mt-1" onclick="ProfilePage.saveSettings()">
+                    Guardar Configuracion
+                </button>
+            </div>
+
+            <div class="card mb-2">
+                <h3 class="card-title mb-2">Preferencias</h3>
+
                 <div class="form-group">
-                    <label class="form-label">📏 Unidades</label>
+                    <label class="form-label">Unidades</label>
                     <select class="form-select" id="setting-units">
-                        <option value="metric" ${settings.units === 'metric' ? 'selected' : ''}>Métrico (kg, cm)</option>
+                        <option value="metric" ${settings.units === 'metric' ? 'selected' : ''}>Metrico (kg, cm)</option>
                         <option value="imperial" ${settings.units === 'imperial' ? 'selected' : ''}>Imperial (lb, in)</option>
                     </select>
                 </div>
 
                 <div class="flex items-center justify-between" style="padding: 0.75rem 0; border-bottom: 1px solid var(--border);">
-                    <span style="font-size: 0.9rem;">⏱️ Timer de descanso</span>
+                    <span style="font-size: 0.85rem;">Timer de descanso automatico</span>
                     <label style="cursor: pointer;">
-                        <input type="checkbox" id="setting-timer" ${settings.restTimer ? 'checked' : ''} style="width: 20px; height: 20px;">
+                        <input type="checkbox" id="setting-timer" ${settings.restTimer !== false ? 'checked' : ''} style="width: 20px; height: 20px;">
                     </label>
                 </div>
-
-                <button class="btn btn-primary btn-full mt-3" onclick="ProfilePage.saveSettings()">
-                    💾 Guardar Configuración
-                </button>
             </div>
 
             <div class="card mb-2">
-                <h3 class="card-title mb-1"> Datos</h3>
+                <h3 class="card-title mb-1">Datos y Backup</h3>
                 <div class="flex flex-col gap-1 mt-2">
                     <button class="btn btn-secondary btn-full btn-sm" onclick="ProfilePage.exportData()">
-                        📤 Exportar Datos (JSON)
+                        Exportar Datos (JSON)
+                    </button>
+                    <button class="btn btn-secondary btn-full btn-sm" onclick="document.getElementById('import-data-input').click()">
+                        Importar Datos
                     </button>
                     <button class="btn btn-secondary btn-full btn-sm" onclick="ProfilePage.resetProgram()">
-                         Reiniciar Programa (Semana 1)
+                        Reiniciar Programa (Semana 1)
                     </button>
                     <button class="btn btn-danger btn-full btn-sm" onclick="ProfilePage.clearAllData()">
-                        🗑️ Borrar Todos los Datos
+                        Borrar Todos los Datos
                     </button>
                 </div>
+                <input type="file" id="import-data-input" accept=".json" style="display:none" onchange="ProfilePage.importData(event)">
             </div>
 
-            <div class="card" style="border-color: var(--accent);">
-                <p style="font-size: 0.8rem; color: var(--accent); text-align: center;">
-                    FitAI v1.0 • Tu entrenador personal con IA<br>
-                    Hecho con  para tu transformación
+            <div class="card" style="border-color: var(--primary);">
+                <p style="font-size: 0.78rem; color: var(--text-secondary); text-align: center; line-height: 1.6;">
+                    <strong style="color:var(--primary)">FitAI Pro v2.0</strong><br>
+                    Coach de fitness con inteligencia artificial<br>
+                    200+ ejercicios | Periodizacion cientifica | Nutricion personalizada<br>
+                    <span style="color:var(--text-muted);font-size:0.68rem;">Datos almacenados localmente en tu dispositivo</span>
                 </p>
             </div>
         `;
@@ -300,12 +310,36 @@ const ProfilePage = {
     },
 
     clearAllData() {
-        if (confirm('⚠️ ¿Borrar TODOS los datos? Esta acción no se puede deshacer.')) {
-            if (confirm('¿Estás seguro? Se perderá todo tu progreso.')) {
+        if (confirm('Borrar TODOS los datos? Esta accion no se puede deshacer.')) {
+            if (confirm('Estas seguro? Se perdera todo tu progreso.')) {
                 localStorage.clear();
                 Helpers.showToast('Datos eliminados');
                 location.reload();
             }
         }
+    },
+
+    importData(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = JSON.parse(e.target.result);
+                if (data.profile) Storage.setProfile(data.profile);
+                if (data.routines) Storage.set('routines', data.routines);
+                if (data.workoutHistory) Storage.set('workoutHistory', data.workoutHistory);
+                if (data.measurements) Storage.set('measurements', data.measurements);
+                if (data.prs) Storage.set('prs', data.prs);
+                if (data.nutritionLog) Storage.set('nutritionLog', data.nutritionLog);
+                Helpers.showToast('Datos importados correctamente!');
+                App.renderCurrentPage();
+            } catch(err) {
+                Helpers.showToast('Error: archivo JSON invalido', 'error');
+            }
+        };
+        reader.readAsText(file);
+        event.target.value = '';
     }
 };
