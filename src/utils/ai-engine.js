@@ -72,7 +72,7 @@ const AIEngine = {
                     'X-Title': 'FitAI Coach'
                 },
                 body: JSON.stringify({
-                    model: 'openai/gpt-4o-mini',
+                    model: 'google/gemma-4-31b-it:free',
                     messages,
                     max_tokens: 2048,
                     temperature: 0.7
@@ -89,7 +89,7 @@ const AIEngine = {
                         'X-Title': 'FitAI Coach'
                     },
                     body: JSON.stringify({
-                        model: 'openai/gpt-4o-mini',
+                        model: 'meta-llama/llama-4-maverick:free',
                         messages,
                         max_tokens: 2048,
                         temperature: 0.7
