@@ -1,11 +1,11 @@
 // ===== AI ENGINE v5.0 - Intelligent Local + Optional API =====
 const AIEngine = {
     ENDPOINTS: [
-        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
-        'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent'
+        'https://openrouter.ai/api/v1/chat/completions'
     ],
 
-    getApiKey() { return localStorage.getItem('gemini_api_key') || ''; },
+    getApiKey() { return localStorage.getItem('fitai_api_key') || ''; },
+    setApiKey(key) { localStorage.setItem('fitai_api_key', key); },
 
     isBlocked(text) {
         const b = ['porno','desnud','xxx','onlyfans','pedofil','prostitu'];
@@ -35,7 +35,7 @@ const AIEngine = {
 
         // Try API first if key exists
         const key = this.getApiKey();
-        if (key && key.length > 10) {
+        if (key && key.startsWith('sk-or-')) {
             try {
                 const result = await this.callAPI(prompt, key);
                 if (result) return result;
@@ -48,32 +48,60 @@ const AIEngine = {
 
     async callAPI(prompt, key) {
         const d = this.getUserData();
-        const sys = `Eres un coach fitness experto. Usuario: ${d.p.name||'Atleta'}, ${d.w}kg, ${d.h}cm, ${d.a} anos, objetivo: ${d.p.goal||'ganar musculo'}, nivel: ${d.p.level||'intermedio'}, semana ${d.week}/12. Responde en espanol. NO uses emojis. Se directo y da numeros concretos.`;
+        const sys = `Eres un coach de fitness y nutricion experto. Respondes CUALQUIER pregunta sobre ejercicios, musculos, tecnicas, nutricion, suplementos, salud fisica, anatomia, biomecánica, lesiones, recuperacion, y todo lo relacionado con el cuerpo humano y el rendimiento deportivo. Si te preguntan por un ejercicio especifico, explica la tecnica paso a paso, musculos involucrados, errores comunes y variantes. Usuario: ${d.p.name||'Atleta'}, ${d.w}kg, ${d.h}cm, ${d.a} anos, objetivo: ${d.p.goal||'ganar musculo'}, nivel: ${d.p.level||'intermedio'}, semana ${d.week}/12 de su programa. Responde SIEMPRE en espanol. NO uses emojis nunca. Se directo, conciso y practico. Da numeros concretos cuando aplique.`;
         const history = Storage.getChatHistory().slice(-6);
-        const contents = [];
-        history.forEach(m => contents.push({role: m.role==='ai'?'model':'user', parts:[{text:m.content}]}));
-        contents.push({role:'user',parts:[{text:prompt}]});
+        const messages = [{role:'system',content:sys}];
+        history.forEach(m => messages.push({role: m.role==='ai'?'assistant':'user', content:m.content}));
+        messages.push({role:'user',content:prompt});
 
-        for (const url of this.ENDPOINTS) {
-            try {
-                const r = await fetch(`${url}?key=${key}`, {
-                    method:'POST', headers:{'Content-Type':'application/json'},
+        try {
+            const r = await fetch(this.ENDPOINTS[0], {
+                method:'POST',
+                headers:{
+                    'Content-Type':'application/json',
+                    'Authorization': 'Bearer ' + key,
+                    'HTTP-Referer': window.location.href,
+                    'X-Title': 'FitAI Coach'
+                },
+                body: JSON.stringify({
+                    model: 'google/gemma-4-31b-it:free',
+                    messages,
+                    max_tokens: 2048,
+                    temperature: 0.7
+                })
+            });
+            if (!r.ok) {
+                // Try another free model
+                const r2 = await fetch(this.ENDPOINTS[0], {
+                    method:'POST',
+                    headers:{
+                        'Content-Type':'application/json',
+                        'Authorization': 'Bearer ' + key,
+                        'HTTP-Referer': window.location.href,
+                        'X-Title': 'FitAI Coach'
+                    },
                     body: JSON.stringify({
-                        system_instruction:{parts:[{text:sys}]},
-                        contents,
-                        generationConfig:{temperature:0.7,maxOutputTokens:2048}
+                        model: 'meta-llama/llama-4-maverick:free',
+                        messages,
+                        max_tokens: 2048,
+                        temperature: 0.7
                     })
                 });
-                if (!r.ok) continue;
-                const data = await r.json();
-                if (data.candidates&&data.candidates[0]&&data.candidates[0].content) {
-                    let text = data.candidates[0].content.parts[0].text;
-                    text = text.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FAFF}]/gu,'');
-                    return text.trim();
+                if (!r2.ok) return null;
+                const data2 = await r2.json();
+                if (data2.choices && data2.choices[0]) {
+                    let text = data2.choices[0].message.content;
+                    return text.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FAFF}]/gu,'').trim();
                 }
-            } catch(e) { continue; }
-        }
-        return null;
+                return null;
+            }
+            const data = await r.json();
+            if (data.choices && data.choices[0]) {
+                let text = data.choices[0].message.content;
+                return text.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FAFF}]/gu,'').trim();
+            }
+            return null;
+        } catch(e) { return null; }
     },
 
 
@@ -350,7 +378,7 @@ const AIEngine = {
     },
 
     genDefault(prompt, d) {
-        return `Sobre "${prompt}":\n\nPuedo responder sobre:\n- Entrenamiento (rutinas, ejercicios, volumen, frecuencia)\n- Nutricion (macros, calorias, comidas, dietas)\n- Suplementacion (creatina, whey, vitaminas)\n- Lesiones y recuperacion\n- Progresion y estancamientos\n- Metas y timelines\n\nEjemplos: "Que entreno hoy?", "Dame mi plan nutricional", "Creame una rutina"`;
+        return `No tengo una respuesta detallada para "${prompt}" sin conexion a la IA.\n\nPara respuestas ilimitadas sobre cualquier tema de fitness, configura tu API key gratuita:\n\n1. Ve a openrouter.ai y crea cuenta (gratis, sin tarjeta)\n2. Crea una API key en openrouter.ai/keys\n3. Abre la consola del navegador (F12) y escribe:\n   localStorage.setItem('fitai_api_key', 'tu-key-aqui')\n4. Recarga la pagina\n\nCon eso podre responder CUALQUIER pregunta sobre ejercicios, tecnicas, nutricion, anatomia, etc.\n\nMientras tanto, prueba: "Que entreno hoy?", "Plan nutricional", "Creame una rutina"`;
     },
 
     createRoutine() {
