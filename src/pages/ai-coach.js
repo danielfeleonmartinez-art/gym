@@ -14,6 +14,9 @@ const AICoachPage = {
                 <button class="quick-action" onclick="AICoachPage.quickPrompt('Como supero mi estancamiento actual?')">Plateau</button>
                 <button class="quick-action" onclick="AICoachPage.quickPrompt('Creame una rutina nueva')">Nueva rutina</button>
                 <button class="quick-action" onclick="AICoachPage.quickPrompt('Guia completa de suplementacion')">Suplementos</button>
+                <button class="quick-action" onclick="AICoachPage.quickPrompt('Dame tips de recuperacion y descanso')">Recuperacion</button>
+                <button class="quick-action" onclick="AICoachPage.quickPrompt('Plan de cardio para mi objetivo')">Cardio</button>
+                <button class="quick-action" onclick="AICoachPage.clearChat()" style="border-color:var(--danger);color:var(--danger);">Limpiar chat</button>
             </div>
 
             <div class="chat-messages" id="chat-messages">

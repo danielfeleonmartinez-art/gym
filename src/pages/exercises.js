@@ -112,18 +112,23 @@ const ExercisesPage = {
                     <img src="${ex.gifUrl}" 
                         alt="${ex.name}" 
                         style="width: 100%; max-width: 350px; border-radius: 12px; display: block; margin: 0 auto;"
+                        loading="lazy"
                         onerror="this.style.display='none'; document.getElementById('exercise-fallback').style.display='flex';"
                     />
                     <div id="exercise-fallback" style="display: none; flex-direction: column; align-items: center; padding: 1.5rem; gap: 0.75rem;">
-                        <span style="font-size: 3.5rem;">${ex.icon}</span>
+                        <div style="width:70px;height:70px;border-radius:50%;background:${muscleColor}15;border:2px solid ${muscleColor}40;display:flex;align-items:center;justify-content:center;">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="${muscleColor}" stroke-width="2" stroke-linecap="round">
+                                <path d="M6.5 6.5h11M6.5 17.5h11M4 6.5a2.5 2.5 0 1 1 0 5M4 12.5a2.5 2.5 0 1 0 0 5M20 6.5a2.5 2.5 0 1 0 0 5M20 12.5a2.5 2.5 0 1 1 0 5M6.5 6.5v11M17.5 6.5v11"/>
+                            </svg>
+                        </div>
                         <p style="font-size: 1.1rem; font-weight: 700;">${ex.name}</p>
-                        <p style="font-size: 0.8rem; color: var(--text-muted); text-align: center; max-width: 280px;">${ex.description}</p>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); text-align: center; max-width: 280px;">${ex.description.substring(0, 100)}...</p>
                         <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
                             <a href="https://www.youtube.com/results?search_query=${searchQuery}" target="_blank" rel="noopener" class="btn btn-primary btn-sm">
-                                 Ver Video
+                                Ver Video
                             </a>
                             <a href="https://www.google.com/search?tbm=isch&q=${searchQuery}+gif" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">
-                                 Ver Imágenes
+                                Ver Imagenes
                             </a>
                         </div>
                     </div>

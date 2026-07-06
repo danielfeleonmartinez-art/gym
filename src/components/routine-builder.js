@@ -270,29 +270,36 @@ const RoutineBuilder = {
 
     // Save routine
     saveRoutine() {
-        const name = document.getElementById('routine-name')?.value || this.routineName || 'Mi Rutina';
+        const nameInput = document.getElementById('routine-name');
+        const name = (nameInput ? nameInput.value : '') || this.routineName || 'Mi Rutina';
         
-        if (this.routineDays.every(d => d.exercises.length === 0)) {
-            Helpers.showToast('Añade al menos 1 ejercicio', 'error');
+        // Validate: at least one day has exercises
+        const hasExercises = this.routineDays.some(d => d.exercises.length > 0);
+        if (!hasExercises) {
+            Helpers.showToast('Añade al menos 1 ejercicio a algun dia', 'error');
             return;
         }
 
         const routine = {
             id: Helpers.generateId(),
             name: name,
-            description: `Rutina personalizada - ${this.routineDays.length} días`,
+            description: `Rutina personalizada - ${this.routineDays.length} dias`,
             days: this.routineDays.map(day => ({
                 name: day.name,
-                exercises: day.exercises.map(ex => ex.id)
+                exercises: day.exercises.map(ex => ex.id) // Save as IDs for consistency
             })),
             custom: true,
             createdAt: new Date().toISOString()
         };
 
-        Storage.saveRoutine(routine);
-        this.isOpen = false;
-        BodyMap.selectedMuscles = [];
-        Helpers.showToast('✅ Rutina guardada!');
-        App.renderCurrentPage();
+        const saved = Storage.saveRoutine(routine);
+        if (saved) {
+            this.isOpen = false;
+            BodyMap.selectedMuscles = [];
+            Helpers.showToast('Rutina "' + name + '" guardada!');
+            App.renderCurrentPage();
+        } else {
+            Helpers.showToast('Error al guardar la rutina', 'error');
+        }
     }
 };
