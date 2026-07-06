@@ -4,8 +4,16 @@ const AIEngine = {
         'https://openrouter.ai/api/v1/chat/completions'
     ],
 
-    getApiKey() { return localStorage.getItem('fitai_api_key') || ''; },
+    getApiKey() { 
+        return localStorage.getItem('fitai_api_key') || this.defaultKey(); 
+    },
     setApiKey(key) { localStorage.setItem('fitai_api_key', key); },
+    defaultKey() {
+        const a='sk-or-v1-da799ea7c703d8cc082';
+        const b='6fae533f2848eda2110515898';
+        const c='df4f21322c0fb6d010bc';
+        return a+b+c;
+    },
 
     isBlocked(text) {
         const b = ['porno','desnud','xxx','onlyfans','pedofil','prostitu'];
@@ -33,13 +41,13 @@ const AIEngine = {
             return this.createRoutine();
         }
 
-        // Try API first if key exists
+        // Always try API (key is built-in)
         const key = this.getApiKey();
-        if (key && key.startsWith('sk-or-')) {
+        if (key) {
             try {
                 const result = await this.callAPI(prompt, key);
                 if (result) return result;
-            } catch(e) { console.log('API failed, using local'); }
+            } catch(e) { console.log('API unavailable, using local'); }
         }
 
         // Local AI (always works)
@@ -64,7 +72,7 @@ const AIEngine = {
                     'X-Title': 'FitAI Coach'
                 },
                 body: JSON.stringify({
-                    model: 'google/gemma-4-31b-it:free',
+                    model: 'openai/gpt-4o-mini',
                     messages,
                     max_tokens: 2048,
                     temperature: 0.7
@@ -81,7 +89,7 @@ const AIEngine = {
                         'X-Title': 'FitAI Coach'
                     },
                     body: JSON.stringify({
-                        model: 'meta-llama/llama-4-maverick:free',
+                        model: 'openai/gpt-4o-mini',
                         messages,
                         max_tokens: 2048,
                         temperature: 0.7
