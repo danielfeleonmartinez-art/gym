@@ -14,7 +14,6 @@ const AICoachPage = {
                 <button class="quick-action" onclick="AICoachPage.quickPrompt('Como supero mi estancamiento actual?')">Plateau</button>
                 <button class="quick-action" onclick="AICoachPage.quickPrompt('Creame una rutina nueva')">Nueva rutina</button>
                 <button class="quick-action" onclick="AICoachPage.quickPrompt('Guia completa de suplementacion')">Suplementos</button>
-                <button class="quick-action" style="border-color:var(--primary);color:var(--primary)" onclick="AICoachPage.configureAPI()">Activar IA completa</button>
             </div>
 
             <div class="chat-messages" id="chat-messages">
@@ -123,17 +122,5 @@ const AICoachPage = {
     clearChat() {
         Storage.clearChatHistory();
         App.renderCurrentPage();
-    },
-
-    configureAPI() {
-        const current = AIEngine.getApiKey();
-        const key = prompt('Pega tu API key de OpenRouter (gratis en openrouter.ai/keys).\nEmpieza con sk-or-v1-...\n\nKey actual: ' + (current ? current.substring(0,15) + '...' : 'ninguna'));
-        if (key && key.startsWith('sk-or-')) {
-            AIEngine.setApiKey(key);
-            Storage.addChatMessage({ role: 'ai', content: 'API configurada correctamente. Ahora puedo responder cualquier pregunta sobre fitness, ejercicios, anatomia, nutricion y mas. Preguntame lo que quieras.' });
-            App.renderCurrentPage();
-        } else if (key) {
-            alert('La key debe empezar con sk-or-. Obtenla gratis en openrouter.ai/keys');
-        }
     }
 };
