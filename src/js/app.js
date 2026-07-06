@@ -35,6 +35,9 @@ const App = {
     navigate(page) {
         this.currentPage = page;
 
+        // Reset sub-pages when navigating
+        if (page === 'exercises') ExercisesPage.showBodyMap = true;
+
         // Update nav active state
         document.querySelectorAll('.nav-item').forEach(item => {
             item.classList.toggle('active', item.dataset.page === page);
@@ -70,6 +73,7 @@ const App = {
             case 'nutrition': html = NutritionPage.render(); break;
             case 'goals': html = GoalsPage.render(); break;
             case 'profile': html = ProfilePage.render(); break;
+            case 'scan': html = ScanPage.render(); break;
             default: html = DashboardPage.render();
         }
 
