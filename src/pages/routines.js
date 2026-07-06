@@ -145,38 +145,49 @@ const RoutinesPage = {
         if (!state) return '';
         const currentExercise = state.exercises[state.currentExerciseIndex];
         const exercise = typeof currentExercise === 'string' ? EXERCISES_DB.find(e => e.id === currentExercise) : currentExercise;
+        const pr = exercise ? Storage.getPRs()[exercise.id] : null;
+        const profile = Storage.getProfile();
+        const suggestedWeight = pr ? Math.round(pr.weight * 0.8) : Math.round((profile.weight||70) * (exercise && exercise.category==='compound'?0.5:0.2));
 
         return `
         <div class="animate-fade">
             <div class="flex justify-between items-center mb-3">
-                <button class="btn btn-secondary btn-sm" onclick="RoutinesPage.exitExecution()">✕ Salir</button>
+                <button class="btn btn-ghost btn-sm" onclick="RoutinesPage.exitExecution()">Salir</button>
                 <span class="badge badge-primary">${state.currentExerciseIndex + 1}/${state.exercises.length}</span>
             </div>
 
             <!-- Progress -->
-            <div class="progress-bar mb-3" style="height: 6px;">
-                <div class="progress-fill accent" style="width: ${Math.round((state.currentExerciseIndex / state.exercises.length) * 100)}%"></div>
+            <div class="progress-bar mb-2" style="height: 4px;">
+                <div class="progress-fill primary" style="width: ${Math.round((state.currentExerciseIndex / state.exercises.length) * 100)}%"></div>
             </div>
 
             <!-- Timer -->
-            <div class="timer-display">
-                <div class="timer-value" id="workout-timer">${Helpers.formatTime(state.elapsedTime)}</div>
-                <div class="timer-label">Tiempo total</div>
+            <div style="text-align:center;margin-bottom:0.75rem;">
+                <span id="workout-timer" style="font-size:1.8rem;font-weight:800;color:var(--primary);font-variant-numeric:tabular-nums">${Helpers.formatTime(state.elapsedTime)}</span>
             </div>
 
-            <!-- Current Exercise -->
+            <!-- Exercise GIF -->
+            ${exercise && exercise.gifUrl ? `
+                <div style="background:#000;border-radius:var(--radius-lg);overflow:hidden;margin-bottom:0.75rem;border:1px solid var(--border)">
+                    <img src="${exercise.gifUrl}" alt="${exercise.name}" style="width:100%;max-height:220px;object-fit:contain;display:block;margin:0 auto" onerror="this.parentElement.style.display='none'">
+                </div>
+            ` : ''}
+
+            <!-- Current Exercise Info -->
             <div class="exercise-execution">
-                <div class="flex items-center gap-2 mb-2">
-                    <span style="font-size: 1.5rem;">${exercise ? exercise.icon : ''}</span>
-                    <div>
-                        <h3 style="font-size: 1.1rem; font-weight: 700;">${exercise ? exercise.name : 'Ejercicio'}</h3>
-                        <p class="text-muted" style="font-size: 0.8rem;">${exercise ? exercise.muscle : ''} • Descanso: ${exercise ? exercise.rest : 60}s</p>
-                    </div>
+                <div style="margin-bottom:0.75rem">
+                    <h3 style="font-size:1rem;font-weight:700;letter-spacing:-0.02em">${exercise ? exercise.name : 'Ejercicio'}</h3>
+                    <p style="font-size:0.72rem;color:var(--text-muted);margin-top:0.15rem">${exercise ? exercise.muscle : ''} | Descanso: ${exercise ? exercise.rest : 60}s | ${exercise ? exercise.reps : ''} reps</p>
+                </div>
+
+                <!-- Weight suggestion -->
+                <div style="background:var(--primary-glow);border:1px solid rgba(34,197,94,0.2);border-radius:8px;padding:0.5rem 0.7rem;margin-bottom:0.75rem;font-size:0.72rem;color:var(--primary)">
+                    Peso sugerido: <strong>${suggestedWeight}kg</strong>${pr ? ' (80% de PR: '+pr.weight+'kg)' : ' (estimado inicial)'} | Sobrecarga: +2.5kg cuando completes todas las reps
                 </div>
 
                 ${exercise && exercise.tips ? `
-                    <div style="background: rgba(108,99,255,0.1); border-radius: 8px; padding: 0.5rem 0.75rem; margin-bottom: 1rem;">
-                        <p style="font-size: 0.75rem; color: var(--primary);">💡 ${exercise.tips[0]}</p>
+                    <div style="background:var(--bg-surface);border-radius:8px;padding:0.45rem 0.65rem;margin-bottom:0.75rem;font-size:0.7rem;color:var(--text-secondary)">
+                        ${exercise.tips[0]}
                     </div>
                 ` : ''}
 
@@ -187,16 +198,16 @@ const RoutinesPage = {
                             <div class="set-number ${state.completedSets[state.currentExerciseIndex] && state.completedSets[state.currentExerciseIndex][i] ? 'completed' : ''}">${i + 1}</div>
                             <div class="set-inputs">
                                 <div>
-                                    <label style="font-size: 0.65rem; color: var(--text-muted);">Peso (kg)</label>
-                                    <input type="number" class="set-input" id="weight-${i}" placeholder="kg" value="${state.weights[state.currentExerciseIndex] ? state.weights[state.currentExerciseIndex][i] || '' : ''}">
+                                    <label style="font-size: 0.6rem; color: var(--text-muted);">kg</label>
+                                    <input type="number" class="set-input" id="weight-${i}" placeholder="${suggestedWeight}" value="${state.weights[state.currentExerciseIndex] ? state.weights[state.currentExerciseIndex][i] || '' : ''}">
                                 </div>
                                 <div>
-                                    <label style="font-size: 0.65rem; color: var(--text-muted);">Reps</label>
-                                    <input type="number" class="set-input" id="reps-${i}" placeholder="reps" value="${state.reps[state.currentExerciseIndex] ? state.reps[state.currentExerciseIndex][i] || '' : ''}">
+                                    <label style="font-size: 0.6rem; color: var(--text-muted);">reps</label>
+                                    <input type="number" class="set-input" id="reps-${i}" placeholder="${exercise?exercise.reps:''}" value="${state.reps[state.currentExerciseIndex] ? state.reps[state.currentExerciseIndex][i] || '' : ''}">
                                 </div>
                             </div>
-                            <button class="btn btn-success btn-sm" onclick="RoutinesPage.completeSet(${i})" ${state.completedSets[state.currentExerciseIndex] && state.completedSets[state.currentExerciseIndex][i] ? 'disabled style="opacity:0.5"' : ''}>
-                                ✓
+                            <button class="btn btn-primary btn-sm" style="min-width:32px" onclick="RoutinesPage.completeSet(${i})" ${state.completedSets[state.currentExerciseIndex] && state.completedSets[state.currentExerciseIndex][i] ? 'disabled style="opacity:0.3;min-width:32px"' : ''}>
+                                OK
                             </button>
                         </div>
                     `).join('')}
@@ -205,20 +216,20 @@ const RoutinesPage = {
 
             <!-- Rest Timer -->
             <div id="rest-timer-container" class="hidden">
-                <div class="card text-center" style="border-color: var(--accent);">
-                    <p style="font-size: 0.8rem; color: var(--accent); margin-bottom: 0.5rem;">⏱️ Descanso</p>
-                    <div id="rest-timer-value" style="font-size: 2rem; font-weight: 700; color: var(--accent);">00:00</div>
-                    <button class="btn btn-accent btn-sm mt-2" onclick="RoutinesPage.skipRest()">Saltar →</button>
+                <div class="card text-center" style="border-color: var(--primary);margin-top:0.75rem">
+                    <p style="font-size: 0.72rem; color: var(--text-muted); margin-bottom: 0.3rem;">Descanso</p>
+                    <div id="rest-timer-value" style="font-size: 2rem; font-weight: 800; color: var(--primary);font-variant-numeric:tabular-nums">00:00</div>
+                    <button class="btn btn-ghost btn-sm mt-1" onclick="RoutinesPage.skipRest()">Saltar</button>
                 </div>
             </div>
 
             <!-- Navigation -->
-            <div class="flex gap-2 mt-3">
-                <button class="btn btn-secondary" onclick="RoutinesPage.prevExercise()" ${state.currentExerciseIndex === 0 ? 'disabled style="opacity:0.5"' : ''}>
-                    ← Anterior
+            <div class="flex gap-2 mt-2">
+                <button class="btn btn-ghost" onclick="RoutinesPage.prevExercise()" ${state.currentExerciseIndex === 0 ? 'disabled style="opacity:0.3"' : ''}>
+                    Anterior
                 </button>
                 <button class="btn btn-primary" style="flex:1;" onclick="RoutinesPage.nextExercise()">
-                    ${state.currentExerciseIndex === state.exercises.length - 1 ? '🎉 Finalizar' : 'Siguiente →'}
+                    ${state.currentExerciseIndex === state.exercises.length - 1 ? 'Finalizar' : 'Siguiente'}
                 </button>
             </div>
         </div>`;
