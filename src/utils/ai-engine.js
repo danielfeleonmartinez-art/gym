@@ -162,7 +162,7 @@ REGLAS DE RESPUESTA:
         // ===== FILTRO DE CONTENIDO - Bloquea contenido sexual/ilegal =====
         const blockedWords = ['sexo', 'sexual', 'porno', 'desnud', 'drogas ilegales', 'esteroides ilegales', 'matar', 'suicid', 'arma', 'bomba', 'hackear', 'robar', 'violencia', 'xxx', 'onlyfans'];
         if (blockedWords.some(word => lowerPrompt.includes(word))) {
-            return `⚠️ **No puedo ayudarte con eso.**\n\nSoy tu coach de fitness y solo puedo hablar sobre:\n• 💪 Entrenamiento y ejercicios\n• 🥗 Nutrición y dietas\n• 📊 Progreso físico\n• 😴 Descanso y recuperación\n• 💊 Suplementación legal\n• 🎯 Metas y motivación\n\n¿En qué puedo ayudarte dentro del fitness?`;
+            return `No puedo ayudarte con eso. Solo respondo preguntas sobre fitness, nutrición, entrenamiento y salud física. ¿En qué puedo ayudarte dentro de esos temas?`;
         }
 
         // Guardar preferencias si el usuario las indica
