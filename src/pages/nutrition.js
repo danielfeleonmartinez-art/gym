@@ -9,7 +9,7 @@ const NutritionPage = {
 
         return `
         <div class="animate-fade">
-            <h2 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 1rem;">🥗 Nutrición</h2>
+            <h2 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 1rem;"> Nutrición</h2>
 
             <!-- Tabs -->
             <div class="tabs">
@@ -36,17 +36,17 @@ const NutritionPage = {
         return `
             <!-- Deficit/Surplus Level Selector -->
             <div class="card mb-3">
-                <h3 class="card-title mb-1">⚡ Nivel de ${(profile.goal || '').includes('perder') || (profile.goal || '').includes('definir') ? 'Déficit' : 'Superávit'}</h3>
+                <h3 class="card-title mb-1"> Nivel de ${(profile.goal || '').includes('perder') || (profile.goal || '').includes('definir') ? 'Déficit' : 'Superávit'}</h3>
                 <p class="text-muted mb-2" style="font-size: 0.75rem;">Elige qué tan agresivo quieres ser. La IA ajusta todo automáticamente.</p>
                 <div style="display: flex; gap: 0.4rem;">
                     <button class="btn btn-sm ${this.deficitLevel === 'leve' ? 'btn-success' : 'btn-secondary'}" style="flex:1;" onclick="NutritionPage.setDeficitLevel('leve')">
                         🐢 Leve
                     </button>
                     <button class="btn btn-sm ${this.deficitLevel === 'moderado' ? 'btn-primary' : 'btn-secondary'}" style="flex:1;" onclick="NutritionPage.setDeficitLevel('moderado')">
-                        ⚡ Moderado
+                         Moderado
                     </button>
                     <button class="btn btn-sm ${this.deficitLevel === 'agresivo' ? 'btn-danger' : 'btn-secondary'}" style="flex:1;" onclick="NutritionPage.setDeficitLevel('agresivo')">
-                        🔥 Agresivo
+                         Agresivo
                     </button>
                 </div>
                 ${macros.deficitInfo ? `
@@ -120,7 +120,7 @@ const NutritionPage = {
 
             <!-- Today's Log -->
             <div class="section-header">
-                <span class="section-title">📋 Hoy (${consumed.calories}/${macros.calories} kcal)</span>
+                <span class="section-title"> Hoy (${consumed.calories}/${macros.calories} kcal)</span>
             </div>
             ${todayLog.length === 0 ? `
                 <p class="text-muted text-center" style="padding: 1rem;">No has registrado comidas hoy</p>
@@ -150,7 +150,7 @@ const NutritionPage = {
             <!-- Calories Burned Today -->
             <div class="card mt-3">
                 <div class="flex justify-between items-center">
-                    <span class="card-title">🔥 Calorías Quemadas Hoy</span>
+                    <span class="card-title"> Calorías Quemadas Hoy</span>
                     <span style="font-weight: 700; color: var(--secondary);">${this.getCaloriesBurned()} kcal</span>
                 </div>
                 <div class="progress-bar mt-1" style="height: 8px;">
@@ -200,26 +200,26 @@ const NutritionPage = {
 
         return `
             <div class="card mb-2">
-                <h3 class="card-title mb-1">🎯 Tips según tu objetivo: ${goal}</h3>
+                <h3 class="card-title mb-1"> Tips según tu objetivo: ${goal}</h3>
                 ${goal.includes('perder') || goal.includes('definir') ? `
                     <ul style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.8; list-style: none;">
-                        <li>🔥 Déficit de 300-500 kcal (no más, pierdes músculo)</li>
+                        <li> Déficit de 300-500 kcal (no más, pierdes músculo)</li>
                         <li>🥩 Proteína MÁS alta en déficit: 2.2-2.5g/kg</li>
                         <li>🚶 Aumenta NEAT (pasos diarios) en vez de bajar más calorías</li>
                         <li>🍽️ Come más volumen con pocas calorías (verduras, proteína magra)</li>
                         <li>⏰ No hagas cardio excesivo, prioriza pesas</li>
-                        <li>📊 Pésate a diario pero mira la MEDIA semanal</li>
-                        <li>🔄 Cada 8-12 semanas haz una semana de mantenimiento</li>
+                        <li> Pésate a diario pero mira la MEDIA semanal</li>
+                        <li> Cada 8-12 semanas haz una semana de mantenimiento</li>
                     </ul>
                 ` : `
                     <ul style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.8; list-style: none;">
-                        <li>📈 Superávit de 200-350 kcal (lean bulk, no te infles)</li>
+                        <li> Superávit de 200-350 kcal (lean bulk, no te infles)</li>
                         <li>🥩 Proteína: 1.8-2.2g/kg es suficiente</li>
                         <li>🍚 Carbos ALTOS especialmente pre y post entreno</li>
                         <li>⏰ Come cada 3-4h para optimizar síntesis proteica</li>
                         <li>🌙 Caseína o yogur griego antes de dormir</li>
                         <li>💧 Hidrátate mucho (afecta rendimiento)</li>
-                        <li>📊 Objetivo: +0.25-0.5kg/semana (más = grasa)</li>
+                        <li> Objetivo: +0.25-0.5kg/semana (más = grasa)</li>
                     </ul>
                 `}
             </div>
@@ -339,7 +339,7 @@ const NutritionPage = {
             { icon: '🌅', name: 'Desayuno (7:00)', calories: Math.round(macros.calories * 0.25), protein: Math.round(macros.protein * 0.25), carbs: Math.round(macros.carbs * 0.3), fats: Math.round(macros.fats * 0.2), foods: 'Avena con leche + plátano + 4 claras + 1 huevo entero + tostada integral' },
             { icon: '🍎', name: 'Media Mañana (10:00)', calories: Math.round(macros.calories * 0.15), protein: Math.round(macros.protein * 0.15), carbs: Math.round(macros.carbs * 0.15), fats: Math.round(macros.fats * 0.25), foods: 'Yogur griego + 30g frutos secos + fruta de temporada' },
             { icon: '🍲', name: 'Almuerzo (13:30)', calories: Math.round(macros.calories * 0.30), protein: Math.round(macros.protein * 0.30), carbs: Math.round(macros.carbs * 0.30), fats: Math.round(macros.fats * 0.25), foods: '200g pechuga pollo/pescado + 100g arroz (crudo) + ensalada grande + aceite oliva' },
-            { icon: '💪', name: 'Pre-entreno (16:30)', calories: Math.round(macros.calories * 0.15), protein: Math.round(macros.protein * 0.15), carbs: Math.round(macros.carbs * 0.2), fats: Math.round(macros.fats * 0.1), foods: 'Batido whey + plátano + 40g avena + miel' },
+            { icon: '', name: 'Pre-entreno (16:30)', calories: Math.round(macros.calories * 0.15), protein: Math.round(macros.protein * 0.15), carbs: Math.round(macros.carbs * 0.2), fats: Math.round(macros.fats * 0.1), foods: 'Batido whey + plátano + 40g avena + miel' },
             { icon: '🌙', name: 'Cena (20:30)', calories: Math.round(macros.calories * 0.15), protein: Math.round(macros.protein * 0.15), carbs: Math.round(macros.carbs * 0.05), fats: Math.round(macros.fats * 0.2), foods: '150g salmón/atún + verduras salteadas + aguacate pequeño' }
         ];
     },

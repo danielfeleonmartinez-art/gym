@@ -22,7 +22,7 @@ const DashboardPage = {
             <!-- Greeting -->
             <div class="mb-3">
                 <h2 style="font-size: 1.4rem; font-weight: 700;">
-                    ${Helpers.getGreeting()}, ${profile.name || 'Atleta'} 👋
+                    ${Helpers.getGreeting()}, ${profile.name || 'Atleta'} 
                 </h2>
                 <p class="text-secondary" style="margin-top: 0.3rem;">
                     Semana ${week}/12 • Fase: ${periodWeek.phase} • RPE ${periodWeek.rpe}
@@ -43,22 +43,22 @@ const DashboardPage = {
             <!-- Stats Grid -->
             <div class="stat-grid">
                 <div class="stat-card">
-                    <div class="stat-icon">🔥</div>
+                    <div class="stat-icon"></div>
                     <div class="stat-value">${streak}</div>
                     <div class="stat-label">Racha (días)</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon">💪</div>
+                    <div class="stat-icon"></div>
                     <div class="stat-value">${thisWeekWorkouts.length}/${profile.daysPerWeek || 4}</div>
                     <div class="stat-label">Sesiones semana</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon">🏋️</div>
+                    <div class="stat-icon"></div>
                     <div class="stat-value">${totalVolume > 1000 ? (totalVolume/1000).toFixed(1) + 'k' : totalVolume}</div>
                     <div class="stat-label">Volumen (kg)</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon">⚡</div>
+                    <div class="stat-icon"></div>
                     <div class="stat-value">${periodWeek.intensity}%</div>
                     <div class="stat-label">Intensidad</div>
                 </div>
@@ -67,7 +67,7 @@ const DashboardPage = {
             <!-- Program Progress -->
             <div class="card mb-3">
                 <div class="card-header">
-                    <span class="card-title">📊 Progreso del Programa</span>
+                    <span class="card-title"> Progreso del Programa</span>
                     <span class="badge badge-primary">${periodWeek.phase}</span>
                 </div>
                 <div class="progress-bar" style="height: 10px; margin-bottom: 0.5rem;">
@@ -83,7 +83,7 @@ const DashboardPage = {
             <!-- Today's Plan -->
             <div class="card mb-3">
                 <div class="card-header">
-                    <span class="card-title">📋 Hoy</span>
+                    <span class="card-title"> Hoy</span>
                     ${todayWorkouts.length > 0 ? '<span class="badge badge-success">✓ Completado</span>' : '<span class="badge badge-warning">Pendiente</span>'}
                 </div>
                 ${todayWorkouts.length > 0 ? `
@@ -94,27 +94,27 @@ const DashboardPage = {
                         ${this.getTodayMessage(profile, week)}
                     </p>
                     <button class="btn btn-primary btn-full" onclick="App.navigate('routines')">
-                        💪 Empezar Entrenamiento
+                         Empezar Entrenamiento
                     </button>
                 `}
             </div>
 
             <!-- Quick Actions -->
             <div class="section-header">
-                <span class="section-title">⚡ Acciones Rápidas</span>
+                <span class="section-title"> Acciones Rápidas</span>
             </div>
             <div class="grid-2 gap-2">
                 <button class="btn btn-secondary btn-full" onclick="App.navigate('ai-coach')">
                     🤖 Preguntar a IA
                 </button>
                 <button class="btn btn-secondary btn-full" onclick="App.navigate('progress')">
-                    📈 Ver Progreso
+                     Ver Progreso
                 </button>
                 <button class="btn btn-secondary btn-full" onclick="App.navigate('nutrition')">
-                    🥗 Plan Nutrición
+                     Plan Nutrición
                 </button>
                 <button class="btn btn-secondary btn-full" onclick="App.navigate('exercises')">
-                    📚 Ejercicios
+                     Ejercicios
                 </button>
             </div>
 

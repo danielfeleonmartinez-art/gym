@@ -17,7 +17,7 @@ const AssessmentPage = {
 
         return `
         <div class="animate-fade">
-            <h2 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 1rem;">📊 Valoración Personal</h2>
+            <h2 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 1rem;"> Valoración Personal</h2>
 
             <!-- Overall Score -->
             <div class="card mb-3 text-center" style="border-color: ${score >= 80 ? 'var(--success)' : score >= 50 ? 'var(--warning)' : 'var(--danger)'};">
@@ -36,7 +36,7 @@ const AssessmentPage = {
 
             <!-- Strengths -->
             <div class="card mb-2" style="border-color: var(--success);">
-                <h3 class="card-title" style="color: var(--success);">💪 Tus Fortalezas</h3>
+                <h3 class="card-title" style="color: var(--success);"> Tus Fortalezas</h3>
                 <ul style="list-style: none; padding: 0; margin-top: 0.5rem;">
                     ${strengths.map(s => '<li style="padding: 0.3rem 0; font-size: 0.85rem; color: var(--text-secondary);">✅ ' + s + '</li>').join('')}
                 </ul>
@@ -60,13 +60,13 @@ const AssessmentPage = {
 
             <!-- Weight Timeline -->
             <div class="card">
-                <h3 class="card-title mb-2">📈 Objetivo de Peso (IA)</h3>
+                <h3 class="card-title mb-2"> Objetivo de Peso (IA)</h3>
                 ${this.renderWeightTimeline(profile)}
             </div>
 
             <!-- Somatotype -->
             <div class="card mt-3" style="border-color: var(--accent);">
-                <h3 class="card-title mb-2">🧬 Tu Somatotipo</h3>
+                <h3 class="card-title mb-2"> Tu Somatotipo</h3>
                 ${this.renderSomatotype(profile)}
             </div>
         </div>`;
@@ -160,7 +160,7 @@ const AssessmentPage = {
     renderSomatotype(profile) {
         const soma = FitnessTools.getSomatotype(profile);
         const colors = { 'Ectomorfo': '#4ECDC4', 'Mesomorfo': '#6C63FF', 'Endomorfo': '#FF6B6B' };
-        const icons = { 'Ectomorfo': '🏃', 'Mesomorfo': '💪', 'Endomorfo': '🐻' };
+        const icons = { 'Ectomorfo': '', 'Mesomorfo': '', 'Endomorfo': '🐻' };
         
         return `
             <div style="text-align: center; margin-bottom: 1rem;">
@@ -170,14 +170,14 @@ const AssessmentPage = {
             </div>
             
             <div style="margin-top: 1rem;">
-                <p style="font-weight: 600; margin-bottom: 0.5rem;">🏋️ Entrenamiento ideal:</p>
+                <p style="font-weight: 600; margin-bottom: 0.5rem;"> Entrenamiento ideal:</p>
                 <ul style="list-style: none; padding: 0;">
                     ${soma.training.map(t => '<li style="padding: 0.25rem 0; font-size: 0.8rem; color: var(--text-secondary);">• ' + t + '</li>').join('')}
                 </ul>
             </div>
             
             <div style="margin-top: 1rem;">
-                <p style="font-weight: 600; margin-bottom: 0.5rem;">🥗 Nutrición ideal:</p>
+                <p style="font-weight: 600; margin-bottom: 0.5rem;"> Nutrición ideal:</p>
                 <ul style="list-style: none; padding: 0;">
                     ${soma.nutrition.map(n => '<li style="padding: 0.25rem 0; font-size: 0.8rem; color: var(--text-secondary);">• ' + n + '</li>').join('')}
                 </ul>

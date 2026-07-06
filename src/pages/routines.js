@@ -26,14 +26,14 @@ const RoutinesPage = {
         return `
         <div class="animate-fade">
             <div class="section-header mb-3">
-                <h2 style="font-size: 1.3rem; font-weight: 700;">💪 Mis Rutinas</h2>
+                <h2 style="font-size: 1.3rem; font-weight: 700;"> Mis Rutinas</h2>
                 <button class="btn btn-primary btn-sm" onclick="RoutinesPage.createRoutine()">+ Crear</button>
             </div>
 
             <!-- Current Phase Info -->
             <div class="card mb-3" style="border-color: var(--primary);">
                 <div class="flex items-center gap-2">
-                    <span style="font-size: 1.5rem;">📅</span>
+                    <span style="font-size: 1.5rem;"></span>
                     <div>
                         <p style="font-weight: 600; font-size: 0.9rem;">Semana ${week} - ${periodWeek.phase}</p>
                         <p class="text-muted" style="font-size: 0.8rem;">Intensidad: ${periodWeek.intensity}% | RPE: ${periodWeek.rpe} ${periodWeek.deload ? '| 🟢 DELOAD' : ''}</p>
@@ -43,7 +43,7 @@ const RoutinesPage = {
 
             ${routines.length === 0 ? `
                 <div class="card text-center" style="padding: 3rem 1.5rem;">
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">🏋️</div>
+                    <div style="font-size: 3rem; margin-bottom: 1rem;"></div>
                     <h3 style="margin-bottom: 0.5rem;">No tienes rutinas aún</h3>
                     <p class="text-secondary mb-3" style="font-size: 0.9rem;">Crea tu rutina personalizada, usa IA o elige una plantilla</p>
                     <div class="flex flex-col gap-2">
@@ -54,7 +54,7 @@ const RoutinesPage = {
                             🤖 Generar con IA
                         </button>
                         <button class="btn btn-secondary btn-full" onclick="RoutinesPage.showTemplates()">
-                            📋 Usar Plantilla
+                             Usar Plantilla
                         </button>
                     </div>
                 </div>
@@ -70,9 +70,9 @@ const RoutinesPage = {
                             <span class="badge badge-primary">${routine.days ? routine.days.length + ' días' : ''}</span>
                         </div>
                         <div class="workout-meta">
-                            <span>📅 ${routine.days ? routine.days.length : '?'}x/semana</span>
+                            <span> ${routine.days ? routine.days.length : '?'}x/semana</span>
                             <span>⏱️ ~60 min</span>
-                            <span>📊 ${routine.phase || periodWeek.phase}</span>
+                            <span> ${routine.phase || periodWeek.phase}</span>
                         </div>
                     </div>
                 `).join('')}
@@ -85,7 +85,7 @@ const RoutinesPage = {
                         🤖 Generar con IA
                     </button>
                     <button class="btn btn-secondary btn-full" onclick="RoutinesPage.showTemplates()">
-                        📋 Usar Plantilla
+                         Usar Plantilla
                     </button>
                 </div>
             `}
@@ -119,7 +119,7 @@ const RoutinesPage = {
                             if (!exercise) return '';
                             return `
                                 <div class="flex items-center gap-2" style="padding: 0.4rem 0; border-bottom: 1px solid var(--border);">
-                                    <span style="font-size: 1.1rem;">${exercise.icon || '🏋️'}</span>
+                                    <span style="font-size: 1.1rem;">${exercise.icon || ''}</span>
                                     <div style="flex: 1;">
                                         <span style="font-size: 0.85rem; font-weight: 500;">${exercise.name}</span>
                                         <span class="text-muted" style="font-size: 0.75rem; margin-left: 0.5rem;">${exercise.sets || 3}x${exercise.reps || '10-12'}</span>
@@ -167,7 +167,7 @@ const RoutinesPage = {
             <!-- Current Exercise -->
             <div class="exercise-execution">
                 <div class="flex items-center gap-2 mb-2">
-                    <span style="font-size: 1.5rem;">${exercise ? exercise.icon : '🏋️'}</span>
+                    <span style="font-size: 1.5rem;">${exercise ? exercise.icon : ''}</span>
                     <div>
                         <h3 style="font-size: 1.1rem; font-weight: 700;">${exercise ? exercise.name : 'Ejercicio'}</h3>
                         <p class="text-muted" style="font-size: 0.8rem;">${exercise ? exercise.muscle : ''} • Descanso: ${exercise ? exercise.rest : 60}s</p>
@@ -236,7 +236,7 @@ const RoutinesPage = {
         const modal = document.getElementById('onboarding-modal');
         modal.classList.remove('hidden');
         document.getElementById('onboarding-steps').innerHTML = `
-            <h2 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 1rem;">📋 Plantillas de Rutina</h2>
+            <h2 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 1rem;"> Plantillas de Rutina</h2>
             ${Object.entries(ROUTINE_TEMPLATES).map(([key, tmpl]) => `
                 <div class="workout-card" onclick="RoutinesPage.useTemplate('${key}')">
                     <div class="workout-title">${tmpl.name}</div>
@@ -244,7 +244,7 @@ const RoutinesPage = {
                     <div class="workout-meta mt-1">
                         <span>📆 ${tmpl.frequency} días</span>
                         <span>⏱️ ${tmpl.duration}</span>
-                        <span>📊 ${tmpl.level}</span>
+                        <span> ${tmpl.level}</span>
                     </div>
                 </div>
             `).join('')}
@@ -371,7 +371,7 @@ const RoutinesPage = {
         const exId = typeof currentEx === 'string' ? currentEx : currentEx.id;
         const weight = state.weights[exIdx][setIndex];
         if (weight > 0 && Storage.updatePR(exId, weight)) {
-            Helpers.showToast('🎉 ¡NUEVO RECORD PERSONAL! 🏆');
+            Helpers.showToast('🎉 ¡NUEVO RECORD PERSONAL! ');
         }
 
         // Start rest timer

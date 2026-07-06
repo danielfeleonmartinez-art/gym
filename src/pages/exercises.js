@@ -43,11 +43,11 @@ const ExercisesPage = {
         if (this.showBodyMap && !this.searchQuery) {
             return `
             <div class="animate-fade">
-                <h2 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 0.5rem;">📚 Ejercicios (${EXERCISES_DB.length})</h2>
+                <h2 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 0.5rem;"> Ejercicios (${EXERCISES_DB.length})</h2>
                 
                 <!-- Search always visible -->
                 <div class="form-group">
-                    <input type="text" class="form-input" placeholder="🔍 Buscar ejercicio..." 
+                    <input type="text" class="form-input" placeholder=" Buscar ejercicio..." 
                         value="${this.searchQuery}" 
                         oninput="ExercisesPage.search(this.value)">
                 </div>
@@ -75,7 +75,7 @@ const ExercisesPage = {
         <div class="animate-fade">
             <div class="flex justify-between items-center mb-2">
                 <h2 style="font-size: 1.2rem; font-weight: 700;">
-                    ${this.filter === 'bodymap' ? `💪 ${this.filteredByMuscles.join(' + ')}` : this.filter !== 'all' ? `💪 ${this.filter}` : '📚 Todos los Ejercicios'}
+                    ${this.filter === 'bodymap' ? ` ${this.filteredByMuscles.join(' + ')}` : this.filter !== 'all' ? ` ${this.filter}` : ' Todos los Ejercicios'}
                 </h2>
                 <button class="btn btn-secondary btn-sm" onclick="ExercisesPage.showBodyMapView()">🧍 Muñeco</button>
             </div>
@@ -83,7 +83,7 @@ const ExercisesPage = {
             <!-- Exercise List -->
             ${filtered.map(exercise => `
                 <div class="exercise-item" onclick="ExercisesPage.selectExercise('${exercise.id}')">
-                    <div class="exercise-icon">${exercise.icon}</div>
+                    <div class="exercise-icon">${exercise.muscle.substring(0,3)}</div>
                     <div class="exercise-info">
                         <div class="exercise-name">${exercise.name}</div>
                         <div class="exercise-detail">${exercise.muscle} • ${exercise.equipment} • ${exercise.sets}x${exercise.reps}</div>
@@ -120,10 +120,10 @@ const ExercisesPage = {
                         <p style="font-size: 0.8rem; color: var(--text-muted); text-align: center; max-width: 280px;">${ex.description}</p>
                         <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
                             <a href="https://www.youtube.com/results?search_query=${searchQuery}" target="_blank" rel="noopener" class="btn btn-primary btn-sm">
-                                ▶️ Ver Video
+                                 Ver Video
                             </a>
                             <a href="https://www.google.com/search?tbm=isch&q=${searchQuery}+gif" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">
-                                🖼️ Ver Imágenes
+                                 Ver Imágenes
                             </a>
                         </div>
                     </div>
@@ -131,7 +131,7 @@ const ExercisesPage = {
             </div>
 
             <div class="text-center mb-3">
-                <h2 style="font-size: 1.4rem; font-weight: 700;">${ex.icon} ${ex.name}</h2>
+                <h2 style="font-size: 1.4rem; font-weight: 700;">${ex.name}</h2>
                 <div class="flex justify-between items-center mt-1" style="justify-content: center; gap: 0.75rem;">
                     <span class="badge" style="background: ${muscleColor}22; color: ${muscleColor};">${ex.muscle}</span>
                     <span class="badge badge-accent">${ex.equipment}</span>
@@ -174,12 +174,12 @@ const ExercisesPage = {
             `}
 
             <div class="card mb-2">
-                <h3 class="card-title mb-1">📋 Descripción</h3>
+                <h3 class="card-title mb-1"> Descripción</h3>
                 <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.6;">${ex.description}</p>
             </div>
 
             <div class="card mb-2">
-                <h3 class="card-title mb-1">📊 Parámetros Recomendados</h3>
+                <h3 class="card-title mb-1"> Parámetros Recomendados</h3>
                 <div class="grid-3 gap-1">
                     <div class="stat-card">
                         <div class="stat-value" style="font-size: 1.2rem;">${ex.sets}</div>

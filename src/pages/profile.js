@@ -51,7 +51,7 @@ const ProfilePage = {
 
             <!-- Profile Form -->
             <div class="card mb-2">
-                <h3 class="card-title mb-2">📋 Datos Personales</h3>
+                <h3 class="card-title mb-2"> Datos Personales</h3>
                 <div class="form-group">
                     <label class="form-label">Nombre</label>
                     <input type="text" class="form-input" id="prof-name" value="${profile.name || ''}" placeholder="Tu nombre">
@@ -113,7 +113,7 @@ const ProfilePage = {
 
             <!-- Quick Stats -->
             <div class="card">
-                <h3 class="card-title mb-1">📊 Resumen</h3>
+                <h3 class="card-title mb-1"> Resumen</h3>
                 <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 2;">
                     <p>IMC: <strong>${bmi}</strong></p>
                     <p>TDEE estimado: <strong>${profile.weight && profile.height && profile.age ? Helpers.calculateTDEE(profile.weight, profile.height, profile.age, profile.gender, 'activo') : '—'} kcal</strong></p>
@@ -128,7 +128,7 @@ const ProfilePage = {
 
         return `
             <div class="card mb-3">
-                <h3 class="card-title mb-2">📊 Valoración Física</h3>
+                <h3 class="card-title mb-2"> Valoración Física</h3>
                 ${bmi ? `
                     <div class="text-center mb-3">
                         <p style="font-size: 2.5rem; font-weight: 800; color: ${bmi < 25 ? 'var(--success)' : bmi < 30 ? 'var(--warning)' : 'var(--danger)'};">${bmi}</p>
@@ -141,7 +141,7 @@ const ProfilePage = {
             </div>
 
             <div class="card mb-2">
-                <h3 class="card-title mb-2">🎯 Tu Plan de 12 Semanas</h3>
+                <h3 class="card-title mb-2"> Tu Plan de 12 Semanas</h3>
                 <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.8;">
                     ${PERIODIZATION.weeks.map(w => `
                         <div class="flex items-center gap-2" style="padding: 0.3rem 0; border-bottom: 1px solid var(--border); ${w.week === Storage.getCurrentWeek() ? 'background: rgba(108,99,255,0.1); padding: 0.5rem; border-radius: 6px; border: 1px solid var(--primary);' : ''}">
@@ -157,17 +157,17 @@ const ProfilePage = {
                 <h3 class="card-title mb-1">📐 Resultados Esperados (12 semanas)</h3>
                 <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.8;">
                     ${profile.level === 'principiante' ? `
-                        <p>💪 Ganancia muscular: <strong>3-6 kg</strong></p>
-                        <p>🏋️ Aumento de fuerza: <strong>30-50%</strong></p>
-                        <p>📊 Cambio visual: <strong>Muy notable</strong></p>
+                        <p> Ganancia muscular: <strong>3-6 kg</strong></p>
+                        <p> Aumento de fuerza: <strong>30-50%</strong></p>
+                        <p> Cambio visual: <strong>Muy notable</strong></p>
                     ` : profile.level === 'intermedio' ? `
-                        <p>💪 Ganancia muscular: <strong>1.5-3 kg</strong></p>
-                        <p>🏋️ Aumento de fuerza: <strong>10-20%</strong></p>
-                        <p>📊 Cambio visual: <strong>Notable</strong></p>
+                        <p> Ganancia muscular: <strong>1.5-3 kg</strong></p>
+                        <p> Aumento de fuerza: <strong>10-20%</strong></p>
+                        <p> Cambio visual: <strong>Notable</strong></p>
                     ` : `
-                        <p>💪 Ganancia muscular: <strong>0.5-1.5 kg</strong></p>
-                        <p>🏋️ Aumento de fuerza: <strong>5-10%</strong></p>
-                        <p>📊 Cambio visual: <strong>Sutil pero real</strong></p>
+                        <p> Ganancia muscular: <strong>0.5-1.5 kg</strong></p>
+                        <p> Aumento de fuerza: <strong>5-10%</strong></p>
+                        <p> Cambio visual: <strong>Sutil pero real</strong></p>
                     `}
                 </div>
             </div>
@@ -210,13 +210,13 @@ const ProfilePage = {
             </div>
 
             <div class="card mb-2">
-                <h3 class="card-title mb-1">🔄 Datos</h3>
+                <h3 class="card-title mb-1"> Datos</h3>
                 <div class="flex flex-col gap-1 mt-2">
                     <button class="btn btn-secondary btn-full btn-sm" onclick="ProfilePage.exportData()">
                         📤 Exportar Datos (JSON)
                     </button>
                     <button class="btn btn-secondary btn-full btn-sm" onclick="ProfilePage.resetProgram()">
-                        🔄 Reiniciar Programa (Semana 1)
+                         Reiniciar Programa (Semana 1)
                     </button>
                     <button class="btn btn-danger btn-full btn-sm" onclick="ProfilePage.clearAllData()">
                         🗑️ Borrar Todos los Datos
@@ -227,7 +227,7 @@ const ProfilePage = {
             <div class="card" style="border-color: var(--accent);">
                 <p style="font-size: 0.8rem; color: var(--accent); text-align: center;">
                     FitAI v1.0 • Tu entrenador personal con IA<br>
-                    Hecho con 💪 para tu transformación
+                    Hecho con  para tu transformación
                 </p>
             </div>
         `;

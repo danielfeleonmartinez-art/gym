@@ -5,7 +5,7 @@ const ProgressPage = {
     render() {
         return `
         <div class="animate-fade">
-            <h2 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 1rem;">📈 Tu Progreso</h2>
+            <h2 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 1rem;"> Tu Progreso</h2>
 
             <!-- Tabs -->
             <div class="tabs">
@@ -36,7 +36,7 @@ const ProgressPage = {
             <!-- Stats Overview -->
             <div class="stat-grid">
                 <div class="stat-card">
-                    <div class="stat-icon">🏋️</div>
+                    <div class="stat-icon"></div>
                     <div class="stat-value">${workouts.length}</div>
                     <div class="stat-label">Entrenamientos</div>
                 </div>
@@ -46,12 +46,12 @@ const ProgressPage = {
                     <div class="stat-label">Tiempo total</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon">💪</div>
+                    <div class="stat-icon"></div>
                     <div class="stat-value">${totalVolume > 1000 ? (totalVolume/1000).toFixed(0) + 'k' : totalVolume}</div>
                     <div class="stat-label">Volumen (kg)</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon">🏆</div>
+                    <div class="stat-icon"></div>
                     <div class="stat-value">${Object.keys(Storage.getPRs()).length}</div>
                     <div class="stat-label">PRs</div>
                 </div>
@@ -60,7 +60,7 @@ const ProgressPage = {
             <!-- Weekly Volume Chart -->
             <div class="chart-container">
                 <div class="chart-header">
-                    <span class="chart-title">📊 Volumen Semanal</span>
+                    <span class="chart-title"> Volumen Semanal</span>
                 </div>
                 <div class="chart-bars">
                     ${weeklyData.map((d, i) => `
@@ -146,8 +146,8 @@ const ProgressPage = {
                         <span class="text-muted" style="font-size: 0.75rem;">${Helpers.formatDate(m.date)}</span>
                         <div style="display: flex; gap: 0.75rem; font-size: 0.8rem;">
                             ${m.weight ? `<span>⚖️ ${m.weight}kg</span>` : ''}
-                            ${m.bodyFat ? `<span>📊 ${m.bodyFat}%</span>` : ''}
-                            ${m.chest ? `<span>💪 ${m.chest}cm</span>` : ''}
+                            ${m.bodyFat ? `<span> ${m.bodyFat}%</span>` : ''}
+                            ${m.chest ? `<span> ${m.chest}cm</span>` : ''}
                         </div>
                     </div>
                 </div>
@@ -159,18 +159,18 @@ const ProgressPage = {
         const prs = Storage.getPRs();
         const prEntries = Object.entries(prs).map(([id, data]) => {
             const exercise = EXERCISES_DB.find(e => e.id === id);
-            return { ...data, id, name: exercise ? exercise.name : id, icon: exercise ? exercise.icon : '🏋️' };
+            return { ...data, id, name: exercise ? exercise.name : id, icon: exercise ? exercise.icon : '' };
         }).sort((a, b) => b.weight - a.weight);
 
         return `
             <div class="section-header mb-2">
-                <span class="section-title">🏆 Records Personales</span>
+                <span class="section-title"> Records Personales</span>
                 <span class="badge badge-warning">${prEntries.length} PRs</span>
             </div>
 
             ${prEntries.length === 0 ? `
                 <div class="card text-center" style="padding: 3rem;">
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">🏆</div>
+                    <div style="font-size: 3rem; margin-bottom: 1rem;"></div>
                     <p class="text-secondary">Aún no tienes PRs registrados</p>
                     <p class="text-muted" style="font-size: 0.8rem; margin-top: 0.5rem;">Se registran automáticamente al entrenar</p>
                 </div>

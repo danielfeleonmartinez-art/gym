@@ -8,12 +8,12 @@ const GoalsPage = {
     render() {
         return `
         <div class="animate-fade">
-            <h2 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 1rem;">🎯 Metas & Calendario</h2>
+            <h2 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 1rem;"> Metas & Calendario</h2>
 
             <div class="tabs">
-                <button class="tab ${this.activeTab === 'calendar' ? 'active' : ''}" onclick="GoalsPage.setTab('calendar')">📅 Calendario</button>
-                <button class="tab ${this.activeTab === 'goals' ? 'active' : ''}" onclick="GoalsPage.setTab('goals')">🎯 Metas</button>
-                <button class="tab ${this.activeTab === 'milestones' ? 'active' : ''}" onclick="GoalsPage.setTab('milestones')">🏆 Logros</button>
+                <button class="tab ${this.activeTab === 'calendar' ? 'active' : ''}" onclick="GoalsPage.setTab('calendar')"> Calendario</button>
+                <button class="tab ${this.activeTab === 'goals' ? 'active' : ''}" onclick="GoalsPage.setTab('goals')"> Metas</button>
+                <button class="tab ${this.activeTab === 'milestones' ? 'active' : ''}" onclick="GoalsPage.setTab('milestones')"> Logros</button>
             </div>
 
             ${this.activeTab === 'calendar' ? this.renderCalendar() : ''}
@@ -80,7 +80,7 @@ const GoalsPage = {
             <!-- Selected Date Info -->
             <div class="card mt-3">
                 <h4 style="font-size: 0.9rem; font-weight: 600; margin-bottom: 0.75rem;">
-                    📅 ${this.formatDate(this.selectedDate)}
+                     ${this.formatDate(this.selectedDate)}
                 </h4>
                 ${this.renderDateInfo(this.selectedDate, workouts, goals)}
             </div>
@@ -88,22 +88,22 @@ const GoalsPage = {
             <!-- Quick Stats -->
             <div class="stat-grid mt-3">
                 <div class="stat-card">
-                    <div class="stat-icon">🔥</div>
+                    <div class="stat-icon"></div>
                     <div class="stat-value">${this.getMonthWorkouts(workouts, month, year)}</div>
                     <div class="stat-label">Entrenos este mes</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon">📊</div>
+                    <div class="stat-icon"></div>
                     <div class="stat-value">${this.getAdherence(workouts, month, year)}%</div>
                     <div class="stat-label">Adherencia</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon">🏆</div>
+                    <div class="stat-icon"></div>
                     <div class="stat-value">${this.getStreak(workouts)}</div>
                     <div class="stat-label">Racha días</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon">🎯</div>
+                    <div class="stat-icon"></div>
                     <div class="stat-value">${goals.filter(g => g.completed).length}/${goals.length}</div>
                     <div class="stat-label">Metas logradas</div>
                 </div>
@@ -127,12 +127,12 @@ const GoalsPage = {
                     <div class="form-group">
                         <label class="form-label">Categoría</label>
                         <select class="form-select" id="goal-category">
-                            <option value="fuerza">💪 Fuerza (PR)</option>
+                            <option value="fuerza"> Fuerza (PR)</option>
                             <option value="peso">⚖️ Peso corporal</option>
-                            <option value="habito">🔄 Hábito</option>
+                            <option value="habito"> Hábito</option>
                             <option value="medida">📐 Medida</option>
-                            <option value="nutricion">🥗 Nutrición</option>
-                            <option value="otro">🎯 Otro</option>
+                            <option value="nutricion"> Nutrición</option>
+                            <option value="otro"> Otro</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -151,13 +151,13 @@ const GoalsPage = {
                     </div>
                 </div>
                 <button class="btn btn-primary btn-full" onclick="GoalsPage.addGoal()">
-                    🎯 Crear Meta
+                     Crear Meta
                 </button>
             </div>
 
             <!-- Active Goals -->
             <div class="section-header">
-                <span class="section-title">📋 Mis Metas Activas</span>
+                <span class="section-title"> Mis Metas Activas</span>
             </div>
             ${goals.filter(g => !g.completed).length === 0 ? `
                 <p class="text-muted text-center" style="padding: 2rem;">No tienes metas activas. ¡Crea una arriba!</p>
@@ -192,12 +192,12 @@ const GoalsPage = {
         const progress = goal.target && goal.current !== undefined ? 
             Math.min(Math.round(((goal.currentProgress || goal.current) / goal.target) * 100), 100) : 0;
         const daysLeft = goal.deadline ? Math.max(0, Math.ceil((new Date(goal.deadline) - new Date()) / (1000*60*60*24))) : null;
-        const categoryIcons = { fuerza: '💪', peso: '⚖️', habito: '🔄', medida: '📐', nutricion: '🥗', otro: '🎯' };
+        const categoryIcons = { fuerza: '', peso: '⚖️', habito: '', medida: '📐', nutricion: '', otro: '' };
 
         return `
             <div class="card mb-2 ${goal.completed ? 'goal-completed' : ''}" style="${goal.completed ? 'opacity: 0.7;' : ''}">
                 <div class="flex items-center gap-2 mb-1">
-                    <span style="font-size: 1.3rem;">${categoryIcons[goal.category] || '🎯'}</span>
+                    <span style="font-size: 1.3rem;">${categoryIcons[goal.category] || ''}</span>
                     <div style="flex: 1;">
                         <p style="font-weight: 600; font-size: 0.9rem; ${goal.completed ? 'text-decoration: line-through;' : ''}">${goal.description}</p>
                         <p class="text-muted" style="font-size: 0.7rem;">
@@ -233,7 +233,7 @@ const GoalsPage = {
 
         return `
             <div class="section-header mb-2">
-                <span class="section-title">🏆 Logros Desbloqueados</span>
+                <span class="section-title"> Logros Desbloqueados</span>
             </div>
 
             <div class="milestones-grid">
@@ -262,7 +262,7 @@ const GoalsPage = {
         if (dayWorkouts.length > 0) {
             html += dayWorkouts.map(w => `
                 <div class="flex items-center gap-2 mb-1" style="padding: 0.4rem; background: rgba(46,204,113,0.1); border-radius: 6px;">
-                    <span>💪</span>
+                    <span></span>
                     <span style="font-size: 0.8rem;">${w.dayName || 'Entrenamiento'} - ${w.totalVolume || 0}kg vol - ${w.duration || 0}min</span>
                 </div>
             `).join('');
@@ -270,7 +270,7 @@ const GoalsPage = {
         if (dayGoals.length > 0) {
             html += dayGoals.map(g => `
                 <div class="flex items-center gap-2 mb-1" style="padding: 0.4rem; background: rgba(108,99,255,0.1); border-radius: 6px;">
-                    <span>🎯</span>
+                    <span></span>
                     <span style="font-size: 0.8rem;">${g.description}</span>
                 </div>
             `).join('');
@@ -314,9 +314,9 @@ const GoalsPage = {
         const weight = profile.weight || 70;
         const level = profile.level || 'intermedio';
         return [
-            { icon: '💪', title: `Bench Press ${Math.round(weight * 1.2)}kg`, desc: '1.2x peso corporal', category: 'fuerza', target: Math.round(weight * 1.2) },
-            { icon: '🦵', title: `Sentadilla ${Math.round(weight * 1.5)}kg`, desc: '1.5x peso corporal', category: 'fuerza', target: Math.round(weight * 1.5) },
-            { icon: '🔥', title: 'Entrenar 4 semanas seguidas', desc: 'Sin faltar ningún día programado', category: 'habito', target: 28 },
+            { icon: '', title: `Bench Press ${Math.round(weight * 1.2)}kg`, desc: '1.2x peso corporal', category: 'fuerza', target: Math.round(weight * 1.2) },
+            { icon: '', title: `Sentadilla ${Math.round(weight * 1.5)}kg`, desc: '1.5x peso corporal', category: 'fuerza', target: Math.round(weight * 1.5) },
+            { icon: '', title: 'Entrenar 4 semanas seguidas', desc: 'Sin faltar ningún día programado', category: 'habito', target: 28 },
             { icon: '⚖️', title: `Llegar a ${profile.goal && profile.goal.includes('perder') ? Math.round(weight - 5) : Math.round(weight + 3)}kg`, desc: profile.goal || 'Objetivo de peso', category: 'peso', target: profile.goal && profile.goal.includes('perder') ? Math.round(weight - 5) : Math.round(weight + 3) },
             { icon: '🥩', title: `${Math.round(weight * 2)}g proteína/día por 30 días`, desc: 'Nutrición consistente', category: 'nutricion', target: 30 },
         ];
@@ -329,14 +329,14 @@ const GoalsPage = {
 
         return [
             { icon: '🌱', name: 'Primer Paso', desc: 'Completa tu primer entrenamiento', unlocked: total >= 1 },
-            { icon: '🔥', name: 'En Llamas', desc: 'Completa 7 entrenamientos', unlocked: total >= 7 },
-            { icon: '💪', name: 'Consistente', desc: 'Completa 15 entrenamientos', unlocked: total >= 15 },
-            { icon: '🏋️', name: 'Máquina', desc: 'Completa 30 entrenamientos', unlocked: total >= 30 },
+            { icon: '', name: 'En Llamas', desc: 'Completa 7 entrenamientos', unlocked: total >= 7 },
+            { icon: '', name: 'Consistente', desc: 'Completa 15 entrenamientos', unlocked: total >= 15 },
+            { icon: '', name: 'Máquina', desc: 'Completa 30 entrenamientos', unlocked: total >= 30 },
             { icon: '👑', name: 'Imparable', desc: 'Completa 50 entrenamientos', unlocked: total >= 50 },
-            { icon: '🏆', name: 'Record', desc: 'Logra tu primer PR', unlocked: Object.keys(prs).length >= 1 },
-            { icon: '⚡', name: 'PR Hunter', desc: 'Logra 5 PRs diferentes', unlocked: Object.keys(prs).length >= 5 },
-            { icon: '📊', name: 'Analítico', desc: 'Registra 10 mediciones', unlocked: Storage.getMeasurements().length >= 10 },
-            { icon: '🥗', name: 'Disciplinado', desc: 'Registra 20 comidas', unlocked: Storage.getNutritionLog().length >= 20 },
+            { icon: '', name: 'Record', desc: 'Logra tu primer PR', unlocked: Object.keys(prs).length >= 1 },
+            { icon: '', name: 'PR Hunter', desc: 'Logra 5 PRs diferentes', unlocked: Object.keys(prs).length >= 5 },
+            { icon: '', name: 'Analítico', desc: 'Registra 10 mediciones', unlocked: Storage.getMeasurements().length >= 10 },
+            { icon: '', name: 'Disciplinado', desc: 'Registra 20 comidas', unlocked: Storage.getNutritionLog().length >= 20 },
             { icon: '🌟', name: 'Transformación', desc: 'Completa el programa de 12 semanas', unlocked: Storage.getCurrentWeek() >= 12 },
         ];
     },
@@ -363,7 +363,7 @@ const GoalsPage = {
             date: new Date().toISOString().split('T')[0]
         };
         Storage.addGoal(goal);
-        Helpers.showToast('🎯 Meta creada!');
+        Helpers.showToast(' Meta creada!');
         App.renderCurrentPage();
     },
 
@@ -374,7 +374,7 @@ const GoalsPage = {
             createdAt: new Date().toISOString(), date: new Date().toISOString().split('T')[0]
         };
         Storage.addGoal(goal);
-        Helpers.showToast('🎯 Meta añadida!');
+        Helpers.showToast(' Meta añadida!');
         App.renderCurrentPage();
     },
 
@@ -382,7 +382,7 @@ const GoalsPage = {
         const val = parseFloat(document.getElementById(`goal-update-${goalId}`)?.value);
         if (isNaN(val)) return;
         Storage.updateGoalProgress(goalId, val);
-        Helpers.showToast('📈 Progreso actualizado');
+        Helpers.showToast(' Progreso actualizado');
         App.renderCurrentPage();
     },
 
