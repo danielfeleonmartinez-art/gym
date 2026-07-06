@@ -1,38 +1,30 @@
-// ===== AI ENGINE v2.0 - Motor de IA Conversacional Avanzado =====
+// ===== AI ENGINE v3.0 - Intelligent Fitness AI =====
 const AIEngine = {
-    // API Key para OpenAI (configurable)
     getApiKey() {
         return Storage.getSettings().apiKey || '';
     },
 
-    // Genera respuesta usando OpenAI API si hay key, sino usa motor local avanzado
     async generateResponse(prompt, context = {}) {
         const apiKey = this.getApiKey();
         if (apiKey) {
             return await this.callOpenAI(prompt, context);
         }
-        return this.localAI(prompt, context);
+        return this.intelligentLocalAI(prompt, context);
     },
 
-    // Llamada a OpenAI con contexto completo del usuario
     async callOpenAI(prompt, context) {
         const apiKey = this.getApiKey();
         const profile = Storage.getProfile();
         const systemPrompt = this.buildSystemPrompt(profile, context);
         const chatHistory = Storage.getChatHistory().slice(-10);
 
-        const messages = [
-            { role: 'system', content: systemPrompt }
-        ];
-
-        // Incluir historial reciente para contexto conversacional
+        const messages = [{ role: 'system', content: systemPrompt }];
         chatHistory.forEach(msg => {
             messages.push({
                 role: msg.role === 'ai' ? 'assistant' : 'user',
                 content: msg.content
             });
         });
-
         messages.push({ role: 'user', content: prompt });
 
         try {
@@ -49,23 +41,19 @@ const AIEngine = {
                     temperature: 0.7
                 })
             });
-
             const data = await response.json();
             if (data.choices && data.choices[0]) {
                 return data.choices[0].message.content;
             }
-            return this.localAI(prompt, context);
+            return this.intelligentLocalAI(prompt, context);
         } catch (error) {
-            console.error('OpenAI API Error:', error);
-            return this.localAI(prompt, context);
+            return this.intelligentLocalAI(prompt, context);
         }
     },
 
-    // Análisis de imagen con OpenAI Vision
     async analyzeImage(base64Image, question = '') {
         const apiKey = this.getApiKey();
         if (apiKey) {
-            // Try OpenAI if key exists
             const profile = Storage.getProfile();
             try {
                 const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -77,26 +65,22 @@ const AIEngine = {
                     body: JSON.stringify({
                         model: 'gpt-4o',
                         messages: [
-                            { role: 'system', content: `Eres un entrenador personal experto y juez de fitness. El usuario se llama ${profile.name || 'Usuario'}, pesa ${profile.weight || '?'}kg, mide ${profile.height || '?'}cm, tiene ${profile.age || '?'} años, nivel ${profile.level || 'intermedio'}, objetivo: ${profile.goal || 'mejorar físico'}. Analiza la imagen de forma honesta, directa y constructiva. Da % grasa estimado, puntos fuertes, débiles, y recomendaciones concretas.` },
+                            { role: 'system', content: `Eres un entrenador personal experto. El usuario: ${profile.name || 'Usuario'}, ${profile.weight || '?'}kg, ${profile.height || '?'}cm, ${profile.age || '?'} anos, nivel ${profile.level || 'intermedio'}, objetivo: ${profile.goal || 'mejorar fisico'}. Analiza la imagen de forma directa y constructiva. Responde en espanol.` },
                             { role: 'user', content: [
-                                { type: 'text', text: question || 'Analiza esta foto de mi físico. Dame una valoración completa: estimación de % de grasa corporal, puntos fuertes musculares, áreas que necesitan más trabajo, simetría, y un plan de acción de 4 semanas para mejorar. Sé directo y honesto.' },
+                                { type: 'text', text: question || 'Analiza esta foto de mi fisico. Dame valoracion completa: estimacion de % grasa, puntos fuertes, areas a mejorar, y plan de accion.' },
                                 { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64Image}` } }
                             ]}
                         ],
                         max_tokens: 1500
                     })
                 });
-
                 const data = await response.json();
                 if (data.choices && data.choices[0]) {
                     return data.choices[0].message.content;
                 }
-                return this.localImageAnalysis(question);
-            } catch(e) {
-                return this.localImageAnalysis(question);
-            }
+            } catch(e) { /* fallback below */ }
         }
-        return this.localImageAnalysis(question);
+        return this.localImageAnalysis();
     },
 
     buildSystemPrompt(profile, context) {
@@ -104,248 +88,191 @@ const AIEngine = {
         const periodWeek = PERIODIZATION.weeks[week - 1] || PERIODIZATION.weeks[0];
         const workouts = Storage.getWorkoutHistory();
         const prs = Storage.getPRs();
-        const prefs = Storage.getUserPreferences();
 
-        return `Eres FitAI, un entrenador personal de ÉLITE, nutricionista deportivo y coach de rendimiento.
-Tu objetivo es que ${profile.name || 'el usuario'} consiga la MEJOR versión de su físico en 3-4 meses.
+        return `Eres un entrenador personal de elite, nutricionista deportivo y coach de rendimiento. Responde SIEMPRE en espanol.
 
 DATOS DEL USUARIO:
-- Nombre: ${profile.name || 'Usuario'}
-- Edad: ${profile.age || '?'} años | Género: ${profile.gender || '?'}
+- Nombre: ${profile.name || 'Usuario'} | Edad: ${profile.age || '?'} | Genero: ${profile.gender || '?'}
 - Peso: ${profile.weight || '?'}kg | Altura: ${profile.height || '?'}cm
-- IMC: ${profile.weight && profile.height ? (profile.weight / ((profile.height/100)**2)).toFixed(1) : '?'}
-- Objetivo principal: ${profile.goal || 'mejorar físico'}
-- Nivel: ${profile.level || 'intermedio'}
-- Días disponibles: ${profile.daysPerWeek || 4}/semana
-- Equipamiento: ${profile.equipment || 'gym completo'}
-- Lesiones/limitaciones: ${profile.injuries && profile.injuries.length > 0 ? profile.injuries.join(', ') : 'ninguna reportada'}
+- Objetivo: ${profile.goal || 'mejorar fisico'} | Nivel: ${profile.level || 'intermedio'}
+- Dias disponibles: ${profile.daysPerWeek || 4}/semana
+- Semana actual: ${week}/12 | Fase: ${periodWeek.phase} | RPE: ${periodWeek.rpe}
+- Entrenamientos completados: ${workouts.length} | PRs: ${Object.keys(prs).length}
 
-ESTADO DEL PROGRAMA:
-- Semana actual: ${week}/12
-- Fase: ${periodWeek.phase}
-- Intensidad: ${periodWeek.intensity}% | RPE: ${periodWeek.rpe}
-- Total entrenamientos completados: ${workouts.length}
-- PRs registrados: ${Object.keys(prs).length}
-${periodWeek.deload ? '⚠️ SEMANA DE DELOAD - el usuario debe reducir volumen e intensidad' : ''}
-
-PREFERENCIAS DEL USUARIO:
-${prefs.trainingStyle ? '- Estilo: ' + prefs.trainingStyle : ''}
-${prefs.focusMuscles ? '- Músculos prioritarios: ' + prefs.focusMuscles : ''}
-${prefs.avoidExercises ? '- Ejercicios a evitar: ' + prefs.avoidExercises : ''}
-${prefs.schedule ? '- Horario de entreno: ' + prefs.schedule : ''}
-${prefs.deadline ? '- Fecha objetivo: ' + prefs.deadline : ''}
-
-REGLAS DE RESPUESTA:
-1. Responde SIEMPRE en español
-2. Sé directo, práctico y basado en evidencia científica
-3. Si el usuario te dice CUÁNDO quiere lograr algo, calcula si es realista y ajusta el plan
-4. Si te dice QUÉ quiere entrenar hoy, dale un entrenamiento COMPLETO con series, reps, peso sugerido
-5. Si te dice CÓMO quiere entrenar (más intenso, menos tiempo, etc.), adapta todo
-6. Usa periodización ondulante DUP, progresión de cargas y principios de hipertrofia basados en Schoenfeld, Helms y Nuckols
-7. Para nutrición, calcula con precisión usando Mifflin-St Jeor + multiplicador de actividad
-8. Da SIEMPRE números concretos: peso, series, reps, kcal, gramos
-9. No seas genérico. Personaliza TODO al perfil del usuario
-10. Usa emojis para hacer visual pero no abuses
-11. Si preguntan algo fuera de fitness/nutrición, responde brevemente y redirige al entrenamiento
-12. RECUERDA el contexto de la conversación anterior`;
+REGLAS:
+1. Se directo, practico y basado en evidencia cientifica
+2. Da numeros concretos siempre: peso, series, reps, kcal, gramos
+3. Personaliza TODO al perfil del usuario
+4. No uses emojis excesivos - maximo 1-2 por respuesta para separar secciones
+5. Formato limpio y legible con negritas para datos importantes
+6. Si preguntan algo fuera de fitness/nutricion/salud, responde brevemente y redirige
+7. NUNCA respondas sobre contenido sexual, ilegal, violento o de sustancias prohibidas`;
     },
 
 
-    // ===== MOTOR LOCAL DE IA v2.0 - Conversacional Avanzado =====
-    localAI(prompt, context) {
-        const lowerPrompt = prompt.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    // ===== INTELLIGENT LOCAL AI v3.0 =====
+    intelligentLocalAI(prompt, context) {
+        const input = prompt.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
         const profile = Storage.getProfile();
         const week = Storage.getCurrentWeek();
         const periodWeek = PERIODIZATION.weeks[week - 1] || PERIODIZATION.weeks[0];
-        const prefs = Storage.getUserPreferences();
 
-        // ===== FILTRO DE CONTENIDO - Bloquea contenido sexual/ilegal =====
-        const blockedWords = ['sexo', 'sexual', 'porno', 'desnud', 'drogas ilegales', 'esteroides ilegales', 'matar', 'suicid', 'arma', 'bomba', 'hackear', 'robar', 'violencia', 'xxx', 'onlyfans'];
-        if (blockedWords.some(word => lowerPrompt.includes(word))) {
-            return `No puedo ayudarte con eso. Solo respondo preguntas sobre fitness, nutrición, entrenamiento y salud física. ¿En qué puedo ayudarte dentro de esos temas?`;
+        // Content filter
+        if (this.isBlockedContent(input)) {
+            return 'No puedo ayudarte con eso. Solo respondo sobre fitness, nutricion, entrenamiento y salud fisica. Preguntame algo dentro de esos temas.';
         }
 
-        // Guardar preferencias si el usuario las indica
-        this.extractAndSavePreferences(prompt, lowerPrompt);
+        // Extract preferences
+        this.extractPreferences(prompt, input);
 
-        // ===== DETECCIÓN INTELIGENTE DE INTENCIÓN =====
-
-        // User wants AI to CREATE and SAVE a routine
-        if (this.matchesIntent(lowerPrompt, ['creame una rutina', 'hazme una rutina', 'arma mi rutina', 'genera mi rutina', 'crea mi programa', 'quiero una rutina nueva', 'necesito una rutina'])) {
-            const routine = this.generateCustomRoutine(profile);
-            Storage.saveRoutine(routine);
-            return `✅ **¡Rutina creada y guardada!**\n\nHe generado tu rutina personalizada "${routine.name}" basada en:\n• Tu nivel: ${profile.level}\n• Días disponibles: ${profile.daysPerWeek}/semana\n• Objetivo: ${profile.goal}\n• Fase actual: ${periodWeek.phase}\n\n📋 **Incluye ${routine.days.length} días:**\n${routine.days.map((d, i) => '• Día ' + (i+1) + ': ' + d.name).join('\n')}\n\n→ Ve a la sección **💪 Rutinas** para verla y empezar a entrenar.\n\n¿Quieres que ajuste algo?`;
+        // Intelligent intent detection with scoring
+        const intent = this.detectIntent(input);
+        
+        switch(intent) {
+            case 'today_workout': return this.genTodayWorkout(profile, periodWeek);
+            case 'muscle_workout': return this.genMuscleWorkout(input, profile, periodWeek);
+            case 'exercise_info': return this.genExerciseInfo(input, profile);
+            case 'full_program': return this.genFullProgram(profile, periodWeek, input);
+            case 'nutrition': return this.genNutrition(input, profile);
+            case 'meal_specific': return this.genMealIdeas(input, profile);
+            case 'supplements': return this.genSupplements(input, profile);
+            case 'injury': return this.genInjuryAdvice(input, profile);
+            case 'recovery': return this.genRecovery(profile, periodWeek);
+            case 'cardio': return this.genCardio(profile, input);
+            case 'progress': return this.genProgress(profile);
+            case 'assessment': return this.genAssessment(profile, periodWeek);
+            case 'plateau': return this.genPlateau(profile, periodWeek);
+            case 'timeline': return this.genTimeline(input, profile);
+            case 'comparison': return this.genComparison(input, profile);
+            case 'aesthetic': return this.genAesthetic(input, profile);
+            case 'training_science': return this.genTrainingScience(input, profile, periodWeek);
+            case 'motivation': return this.genMotivation(profile);
+            case 'somatotype': return this.genSomatotype(profile);
+            case 'one_rm': return this.genOneRM(input, profile);
+            case 'create_routine': return this.genCreateRoutine(profile, periodWeek);
+            case 'greeting': return this.genGreeting(profile, periodWeek);
+            case 'thanks': return this.genThanks(profile);
+            case 'weight_management': return this.genWeightManagement(input, profile);
+            case 'flexibility': return this.genFlexibility(input, profile);
+            case 'beginner': return this.genBeginnerGuide(profile);
+            case 'alcohol': return this.genAlcohol(profile);
+            case 'sleep': return this.genSleep(profile);
+            case 'stress': return this.genStress(profile);
+            case 'hydration': return this.genHydration(profile);
+            case 'myths': return this.genMyths(input);
+            case 'hormones': return this.genHormones(input, profile);
+            case 'aging': return this.genAging(input, profile);
+            case 'womens_fitness': return this.genWomensFitness(input, profile);
+            case 'home_workout': return this.genHomeWorkout(input, profile);
+            case 'frequency': return this.genFrequency(input, profile);
+            default: return this.genSmartDefault(prompt, input, profile, periodWeek);
         }
-
-        // 1. El usuario quiere entrenar AHORA o pregunta qué hacer hoy
-        if (this.matchesIntent(lowerPrompt, ['que hago hoy', 'que entreno hoy', 'entrenamiento de hoy', 'que toca hoy', 'dame el entreno', 'voy al gym', 'que puedo hacer hoy', 'sesion de hoy', 'workout de hoy', 'entreno hoy'])) {
-            return this.generateTodayWorkout(profile, periodWeek, prefs);
-        }
-
-        // 2. Quiere una rutina para un músculo específico
-        if (this.matchesMuscleRequest(lowerPrompt)) {
-            return this.generateMuscleWorkout(lowerPrompt, profile, periodWeek);
-        }
-
-        // 3. Pregunta por ejercicios específicos o mejores ejercicios
-        if (this.matchesIntent(lowerPrompt, ['mejor ejercicio', 'mejores ejercicios', 'que ejercicio', 'ejercicios para', 'como hacer', 'tecnica de', 'alternativa a', 'sustituir'])) {
-            return this.generateExerciseAdvice(lowerPrompt, profile);
-        }
-
-        // 4. Quiere rutina personalizada / programa completo
-        if (this.matchesIntent(lowerPrompt, ['rutina', 'programa', 'plan de entrenamiento', 'planificacion', 'mesociclo', 'hazme un plan', 'crea una rutina', 'diseña', 'arma'])) {
-            return this.generateFullProgram(profile, periodWeek, lowerPrompt, prefs);
-        }
-
-        // 5. Indicaciones temporales (quiero estar listo para X fecha)
-        if (this.matchesIntent(lowerPrompt, ['para cuando', 'en cuanto tiempo', 'meses', 'semanas', 'antes de', 'para el verano', 'para diciembre', 'para enero', 'tengo', 'plazo', 'deadline', 'fecha'])) {
-            return this.generateTimelinePlan(lowerPrompt, profile, periodWeek);
-        }
-
-        // 6. Nutrición detallada
-        if (this.matchesIntent(lowerPrompt, ['nutri', 'dieta', 'comer', 'comida', 'macro', 'calor', 'proteina', 'carbohidrato', 'grasa', 'desayuno', 'almuerzo', 'cena', 'snack', 'receta', 'que como', 'cuanto debo comer', 'meal prep'])) {
-            return this.generateDetailedNutrition(lowerPrompt, profile);
-        }
-
-        // 7. Valoración física
-        if (this.matchesIntent(lowerPrompt, ['valorar', 'valoraci', 'evalua', 'estado', 'como estoy', 'como voy', 'donde estoy', 'nivel'])) {
-            return this.generateDetailedAssessment(profile, periodWeek);
-        }
-
-        // 8. Progreso y resultados
-        if (this.matchesIntent(lowerPrompt, ['progreso', 'avance', 'resultado', 'cuanto he mejorado', 'estadistica', 'resumen'])) {
-            return this.generateDetailedProgress(profile);
-        }
-
-        // 9. Dolor, lesión o molestia
-        if (this.matchesIntent(lowerPrompt, ['dolor', 'lesion', 'molestia', 'me duele', 'lastim', 'pinzamiento', 'tendinitis', 'hombro', 'rodilla', 'espalda baja', 'lumbar'])) {
-            return this.generateInjuryAdvice(lowerPrompt, profile);
-        }
-
-        // 10. Suplementación
-        if (this.matchesIntent(lowerPrompt, ['suplement', 'creatina', 'whey', 'pre-entreno', 'pre entreno', 'bcaa', 'vitamina', 'omega'])) {
-            return this.generateDetailedSupplements(profile, lowerPrompt);
-        }
-
-        // 11. Cardio
-        if (this.matchesIntent(lowerPrompt, ['cardio', 'correr', 'hiit', 'liss', 'aerobico', 'bicicleta', 'nadar', 'quemar grasa', 'acondicionamiento'])) {
-            return this.generateCardioAdvice(profile, lowerPrompt);
-        }
-
-        // 12. Descanso / Recovery / Sueño
-        if (this.matchesIntent(lowerPrompt, ['descanso', 'dormir', 'sueno', 'recuper', 'sobreentren', 'fatiga', 'estres', 'deload'])) {
-            return this.generateDetailedRecovery(profile, periodWeek);
-        }
-
-        // 13. Motivación
-        if (this.matchesIntent(lowerPrompt, ['motiv', 'animo', 'no quiero', 'cansad', 'pereza', 'flojera', 'no puedo', 'rendir', 'abandonar', 'dificil'])) {
-            return this.generateMotivation(profile);
-        }
-
-        // 14. Comparación o dudas técnicas
-        if (this.matchesIntent(lowerPrompt, ['es mejor', 'que es mejor', 'diferencia entre', 'vs', 'conviene', 'deberia', 'que hago si', 'sirve'])) {
-            return this.generateComparison(lowerPrompt, profile);
-        }
-
-        // 15. Preguntas sobre estética / músculos específicos
-        if (this.matchesIntent(lowerPrompt, ['como tener', 'como sacar', 'como marcar', 'abdominales', 'six pack', 'brazos grandes', 'espalda ancha', 'hombros grandes', 'pecho grande', 'gluteos', 'piernas grandes'])) {
-            return this.generateAestheticAdvice(lowerPrompt, profile);
-        }
-
-        // 16. Volumen, intensidad, frecuencia
-        if (this.matchesIntent(lowerPrompt, ['cuantas series', 'cuantas reps', 'cuanto volumen', 'frecuencia', 'cuantos dias', 'cuanto peso', 'rpe', 'rir', 'al fallo', 'intensidad'])) {
-            return this.generateTrainingScience(lowerPrompt, profile, periodWeek);
-        }
-
-        // 17. Estancamiento / Plateau
-        if (this.matchesIntent(lowerPrompt, ['estancad', 'no progreso', 'no avanzo', 'plateau', 'no subo peso', 'no crezco', 'igual', 'no cambio', 'no veo resultados'])) {
-            return this.generatePlateauAdvice(profile, periodWeek);
-        }
-
-        // 18. Saludo o conversación general
-        if (this.matchesIntent(lowerPrompt, ['hola', 'hey', 'buenas', 'que tal', 'como estas', 'buenos dias', 'buenas tardes', 'buenas noches'])) {
-            return this.generateGreeting(profile, periodWeek);
-        }
-
-        // 1RM Calculator
-        if (this.matchesIntent(lowerPrompt, ['1rm', 'maximo', 'rm', 'repeticion maxima', 'calcula mi maximo', 'calcular mi 1rm'])) {
-            const weight = profile.weight || 70;
-            return `🏆 **Calculadora de 1RM (Repetición Máxima)**\n\nPara calcular tu máximo teórico, dime:\n• Peso que levantas\n• Repeticiones que haces\n\nEjemplo: "Hago 80kg por 8 reps en bench"\n\n**Fórmula rápida (Brzycki):**\n• 80kg × 8 reps = **~101kg de 1RM**\n\n**Tabla de porcentajes:**\n| % | Peso | Reps | Uso |\n|---|------|------|-----|\n| 100% | 1RM | 1 | Test |\n| 90% | ${Math.round(weight*1.2*0.9)}kg | 3 | Fuerza |\n| 80% | ${Math.round(weight*1.2*0.8)}kg | 8 | Hipertrofia |\n| 70% | ${Math.round(weight*1.2*0.7)}kg | 12 | Resistencia |\n\nDime un ejercicio con peso y reps y te calculo el 1RM exacto.`;
-        }
-
-        // Somatotype question
-        if (this.matchesIntent(lowerPrompt, ['somatotipo', 'tipo de cuerpo', 'ectomorfo', 'mesomorfo', 'endomorfo', 'que tipo de cuerpo', 'mi tipo de cuerpo'])) {
-            const soma = FitnessTools.getSomatotype(profile);
-            return `🧬 **Tu Somatotipo: ${soma.type}**\n\n${soma.description}\n\n**🏋️ Entrenamiento ideal para ti:**\n${soma.training.map(t => '• ' + t).join('\n')}\n\n**🥗 Nutrición ideal:**\n${soma.nutrition.map(n => '• ' + n).join('\n')}\n\n💡 Recuerda: nadie es 100% un solo tipo. La mayoría somos una mezcla, pero tu tipo dominante define la estrategia óptima.`;
-        }
-
-        // 19. Agradecimiento
-        if (this.matchesIntent(lowerPrompt, ['gracias', 'genial', 'perfecto', 'excelente', 'crack', 'buenisimo', 'me encanta', 'eres el mejor'])) {
-            return this.generateThankYouResponse(profile);
-        }
-
-        // Default: Intenta responder basado en contexto
-        return this.generateContextualResponse(prompt, lowerPrompt, profile, periodWeek);
     },
 
-    // ===== UTILIDADES DE MATCHING =====
-    matchesIntent(text, keywords) {
-        return keywords.some(kw => text.includes(kw));
+    // ===== CONTENT FILTER =====
+    isBlockedContent(text) {
+        const blocked = ['sexo','sexual','porno','desnud','drogas ilegal','esteroides ilegal',
+            'matar','suicid','arma','bomba','hackear','robar','xxx','onlyfans',
+            'violencia','violar','terroris','pedofil','trafico'];
+        return blocked.some(w => text.includes(w));
     },
 
-    matchesMuscleRequest(text) {
-        const muscles = ['pecho', 'espalda', 'hombro', 'pierna', 'biceps', 'triceps', 'core', 'abdomen', 'gluteo', 'pantorrilla', 'antebrazo', 'trapecio'];
-        const actions = ['entrena', 'trabaja', 'hoy toca', 'quiero', 'dame', 'rutina de', 'ejercicios de', 'sesion de'];
-        const hasMuscle = muscles.some(m => text.includes(m));
-        const hasAction = actions.some(a => text.includes(a));
-        return hasMuscle && hasAction;
+
+    // ===== INTELLIGENT INTENT DETECTION =====
+    detectIntent(text) {
+        const intents = [
+            { id: 'create_routine', keywords: ['creame una rutina','hazme una rutina','arma mi rutina','genera mi rutina','crea mi programa','quiero una rutina nueva','necesito una rutina','generame'], score: 0 },
+            { id: 'today_workout', keywords: ['que hago hoy','que entreno hoy','entrenamiento de hoy','que toca hoy','dame el entreno','voy al gym','sesion de hoy','workout de hoy','entreno hoy','que puedo hacer hoy'], score: 0 },
+            { id: 'muscle_workout', keywords: ['entrena','trabaja','hoy toca','dame','rutina de','ejercicios de','sesion de'], muscles: ['pecho','espalda','hombro','pierna','biceps','triceps','core','abdomen','gluteo','pantorrilla','trapecio'], score: 0 },
+            { id: 'exercise_info', keywords: ['mejor ejercicio','mejores ejercicios','que ejercicio','ejercicios para','como hacer','tecnica de','alternativa a','sustituir','como se hace'], score: 0 },
+            { id: 'full_program', keywords: ['rutina','programa','plan de entrenamiento','planificacion','mesociclo','diseña','ppl','push pull','upper lower','full body'], score: 0 },
+            { id: 'nutrition', keywords: ['nutri','dieta','comer','comida','macro','caloria','proteina','carbohidrato','grasa','que como','cuanto debo comer','meal prep','deficit','superavit','bulk','cut'], score: 0 },
+            { id: 'meal_specific', keywords: ['desayuno','almuerzo','cena','snack','receta','pre entreno','post entreno','antes de entrenar','despues de entrenar','merienda'], score: 0 },
+            { id: 'supplements', keywords: ['suplement','creatina','whey','pre-entreno','bcaa','vitamina','omega','proteina en polvo','batido'], score: 0 },
+            { id: 'injury', keywords: ['dolor','lesion','molestia','me duele','lastim','pinzamiento','tendinitis','hombro','rodilla','espalda baja','lumbar','codo','muneca'], score: 0 },
+            { id: 'recovery', keywords: ['descanso','recuper','sobreentren','fatiga','deload','overtrain'], score: 0 },
+            { id: 'sleep', keywords: ['dormir','sueno','insomnio','hora de dormir','calidad de sueno','melatonina'], score: 0 },
+            { id: 'cardio', keywords: ['cardio','correr','hiit','liss','aerobico','bicicleta','nadar','quemar grasa','acondicionamiento','trotar','caminar'], score: 0 },
+            { id: 'progress', keywords: ['progreso','avance','resultado','cuanto he mejorado','estadistica','resumen','como voy'], score: 0 },
+            { id: 'assessment', keywords: ['valorar','valoraci','evalua','estado','como estoy','donde estoy','mi nivel','analisis'], score: 0 },
+            { id: 'plateau', keywords: ['estancad','no progreso','no avanzo','plateau','no subo peso','no crezco','no cambio','no veo resultado','no funciona'], score: 0 },
+            { id: 'timeline', keywords: ['para cuando','en cuanto tiempo','meses','semanas','antes de','para el verano','plazo','deadline','fecha','cuanto tardo'], score: 0 },
+            { id: 'comparison', keywords: ['es mejor','que es mejor','diferencia entre','vs','conviene','deberia','que hago si','sirve','cual es mejor'], score: 0 },
+            { id: 'aesthetic', keywords: ['como tener','como sacar','como marcar','six pack','brazos grandes','espalda ancha','hombros grandes','pecho grande','gluteos','piernas grandes','verse bien','estetica'], score: 0 },
+            { id: 'training_science', keywords: ['cuantas series','cuantas reps','cuanto volumen','frecuencia','cuantos dias','cuanto peso','rpe','rir','al fallo','intensidad','volumen optimo'], score: 0 },
+            { id: 'motivation', keywords: ['motiv','animo','no quiero','cansad','pereza','flojera','no puedo','abandonar','dificil','desganad'], score: 0 },
+            { id: 'somatotype', keywords: ['somatotipo','tipo de cuerpo','ectomorfo','mesomorfo','endomorfo'], score: 0 },
+            { id: 'one_rm', keywords: ['1rm','maximo','rm','repeticion maxima','calcula mi maximo','fuerza maxima'], score: 0 },
+            { id: 'weight_management', keywords: ['peso','bascula','subir peso','bajar peso','engordar','adelgazar','recomposicion','perder grasa','ganar peso'], score: 0 },
+            { id: 'flexibility', keywords: ['flexibilidad','estira','movilidad','yoga','elongacion','rango de movimiento'], score: 0 },
+            { id: 'beginner', keywords: ['empezar','comenzar','principiante','nuevo en','primera vez','no se nada','por donde empiezo'], score: 0 },
+            { id: 'alcohol', keywords: ['alcohol','cerveza','trago','fiesta','beber','vino','licor'], score: 0 },
+            { id: 'stress', keywords: ['ansiedad','estres','depres','triste','mental','salud mental','nervio'], score: 0 },
+            { id: 'hydration', keywords: ['agua','hidrat','liquido','cuanta agua','sed'], score: 0 },
+            { id: 'myths', keywords: ['es verdad','es cierto','mito','verdad o mentira','realmente','funciona'], score: 0 },
+            { id: 'hormones', keywords: ['testosterona','hormona','cortisol','insulina','hormonal','tiroides'], score: 0 },
+            { id: 'aging', keywords: ['edad','viejo','anos','mayor','envejecer','despues de los 40','50 anos'], score: 0 },
+            { id: 'womens_fitness', keywords: ['mujer','femenin','embarazo','menstruacion','ciclo menstrual','menopausia'], score: 0 },
+            { id: 'home_workout', keywords: ['casa','en casa','sin equipo','sin gym','sin pesas','bodyweight','calistenia'], score: 0 },
+            { id: 'frequency', keywords: ['cuanto tiempo','cuantas veces','cuantos dias','cada cuanto','con que frecuencia','hora','cuando entrenar'], score: 0 },
+            { id: 'greeting', keywords: ['hola','hey','buenas','que tal','como estas','buenos dias','buenas tardes','buenas noches'], score: 0 },
+            { id: 'thanks', keywords: ['gracias','genial','perfecto','excelente','crack','buenisimo','me encanta','eres el mejor','increible'], score: 0 },
+        ];
+
+        // Score each intent
+        for (let intent of intents) {
+            for (let kw of intent.keywords) {
+                if (text.includes(kw)) {
+                    intent.score += kw.length; // Longer matches = more specific
+                }
+            }
+            // Special muscle check
+            if (intent.id === 'muscle_workout' && intent.muscles) {
+                const hasMuscle = intent.muscles.some(m => text.includes(m));
+                const hasAction = intent.keywords.some(k => text.includes(k));
+                if (hasMuscle && hasAction) intent.score += 20;
+                else intent.score = 0;
+            }
+        }
+
+        // Return highest scoring intent
+        const best = intents.reduce((a, b) => a.score > b.score ? a : b);
+        return best.score > 0 ? best.id : 'default';
     },
 
-    // ===== EXTRACCIÓN DE PREFERENCIAS =====
-    extractAndSavePreferences(prompt, lowerPrompt) {
+
+    // ===== PREFERENCE EXTRACTION =====
+    extractPreferences(prompt, input) {
         const prefs = Storage.getUserPreferences();
         let changed = false;
-
-        // Detectar horario
-        const timeMatch = prompt.match(/entreno (?:a las?|por la) (\d+|mañana|tarde|noche)/i);
-        if (timeMatch) {
-            prefs.schedule = timeMatch[0];
-            changed = true;
-        }
-
-        // Detectar músculos prioritarios
-        const focusMatch = prompt.match(/(?:quiero|necesito|priorizar?|enfocarme en|mejorar) (?:mis? )?(pecho|espalda|hombros?|piernas?|brazos?|bíceps|tríceps|abdomen|glúteos?)/i);
-        if (focusMatch) {
-            prefs.focusMuscles = (prefs.focusMuscles ? prefs.focusMuscles + ', ' : '') + focusMatch[2];
-            changed = true;
-        }
-
-        // Detectar deadline
+        const timeMatch = prompt.match(/entreno (?:a las?|por la) (\d+|manana|tarde|noche)/i);
+        if (timeMatch) { prefs.schedule = timeMatch[0]; changed = true; }
+        const focusMatch = prompt.match(/(?:quiero|necesito|priorizar?|enfocarme en|mejorar) (?:mis? )?(pecho|espalda|hombros?|piernas?|brazos?|biceps|triceps|abdomen|gluteos?)/i);
+        if (focusMatch) { prefs.focusMuscles = (prefs.focusMuscles ? prefs.focusMuscles + ', ' : '') + focusMatch[1]; changed = true; }
         const deadlineMatch = prompt.match(/(?:para|antes de|en) (\d+ (?:meses?|semanas?)|(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre))/i);
-        if (deadlineMatch) {
-            prefs.deadline = deadlineMatch[1];
-            changed = true;
-        }
+        if (deadlineMatch) { prefs.deadline = deadlineMatch[1]; changed = true; }
+        if (changed) Storage.setUserPreferences(prefs);
+    },
 
-        // Detectar estilo
-        const styleMatch = prompt.match(/(?:me gusta|prefiero|quiero) (?:entrenar? )?(pesado|ligero|rápido|intenso|con máquinas|con mancuernas|con barra|funcional|calistenia|crossfit|powerlifting|bodybuilding)/i);
-        if (styleMatch) {
-            prefs.trainingStyle = styleMatch[1];
-            changed = true;
-        }
-
-        if (changed) {
-            Storage.setUserPreferences(prefs);
-        }
+    // ===== HELPER: User metrics =====
+    getUserMetrics(profile) {
+        const w = profile.weight || 70;
+        const h = profile.height || 175;
+        const a = profile.age || 25;
+        const g = profile.gender || 'hombre';
+        const bmi = (w / ((h/100)**2)).toFixed(1);
+        let bmr = g === 'mujer' ? 10*w + 6.25*h - 5*a - 161 : 10*w + 6.25*h - 5*a + 5;
+        const tdee = Math.round(bmr * 1.55);
+        return { w, h, a, g, bmi, bmr: Math.round(bmr), tdee };
     },
 
 
-    // ===== GENERADORES DE RESPUESTA INTELIGENTES =====
+    // ===== RESPONSE GENERATORS =====
 
-    generateTodayWorkout(profile, periodWeek, prefs) {
-        const dayOfWeek = new Date().getDay(); // 0=dom, 1=lun...
+    genTodayWorkout(profile, periodWeek) {
         const days = profile.daysPerWeek || 4;
-        const level = profile.level || 'intermedio';
+        const isDeload = periodWeek.deload;
+        const rpe = periodWeek.rpe;
         const workoutsThisWeek = Storage.getWorkoutHistory().filter(w => {
             const d = new Date(w.date);
             const now = new Date();
@@ -353,1667 +280,701 @@ REGLAS DE RESPUESTA:
             monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
             monday.setHours(0,0,0,0);
             return d >= monday;
-        });
+        }).length;
 
-        const completedToday = workoutsThisWeek.length;
-        const isDeload = periodWeek.deload;
-        const rpe = periodWeek.rpe;
-
-        // Determinar qué toca hoy basado en split y día de la semana
         let templateKey = days <= 3 ? 'fullBody' : days === 4 ? 'upperLower' : days >= 5 ? 'ppl' : 'upperLower';
         const template = ROUTINE_TEMPLATES[templateKey];
-        const dayIndex = completedToday % template.days.length;
+        const dayIndex = workoutsThisWeek % template.days.length;
         const todayPlan = template.days[dayIndex];
-
-        // Construir entrenamiento con pesos sugeridos
         const prs = Storage.getPRs();
-        const exerciseDetails = todayPlan.exercises.map(exId => {
+
+        const exercises = todayPlan.exercises.map(exId => {
             const ex = EXERCISES_DB.find(e => e.id === exId);
             if (!ex) return null;
             const pr = prs[exId];
-            const suggestedWeight = pr ? Math.round(pr.weight * (periodWeek.intensity / 100)) : '?';
+            const suggestedWeight = pr ? Math.round(pr.weight * (periodWeek.intensity / 100)) : null;
             const sets = isDeload ? Math.max(2, ex.sets - 1) : ex.sets;
-            const reps = isDeload ? '8-12 (fácil)' : ex.reps;
-            return { ...ex, suggestedWeight, sets, reps, targetRPE: rpe };
+            return { ...ex, suggestedWeight, sets, targetRPE: rpe };
         }).filter(Boolean);
 
-        return `💪 **Tu Entrenamiento de Hoy**
-
-📅 **${todayPlan.name}**
-📊 Semana ${Storage.getCurrentWeek()}/12 | Fase: ${periodWeek.phase} | RPE: ${rpe}
-${isDeload ? '🟢 **DELOAD** - Peso ligero, enfócate en técnica y conexión mente-músculo\n' : ''}
----
-
-${exerciseDetails.map((ex, i) => `
-**${i + 1}. ${ex.icon} ${ex.name}**
-   → ${ex.sets} series × ${ex.reps} reps
-   → Peso sugerido: **${ex.suggestedWeight}kg** (RPE ${ex.targetRPE})
-   → Descanso: ${ex.rest}s
-   💡 ${ex.tips[0]}
-`).join('')}
-
----
-⏱️ **Duración estimada:** ${isDeload ? '40-50' : '55-70'} minutos
-🔥 **Volumen estimado:** ~${exerciseDetails.reduce((sum, ex) => sum + (ex.suggestedWeight !== '?' ? ex.suggestedWeight * 10 * ex.sets : 0), 0)}kg total
-
-**📋 Instrucciones:**
-${isDeload ? 
-'• Usa el 55-60% de tu máximo\n• No llegues al fallo en ninguna serie\n• Enfócate en sentir cada músculo\n• Si algo duele, sáltalo' :
-'• Calienta 5-10min (cardio ligero + movilidad)\n• Series de aproximación antes de los compound pesados\n• Última serie de cada ejercicio: llega cerca del fallo (RPE ' + rpe + ')\n• Anota todos tus pesos para progresar la próxima semana'}
-
-${prefs.focusMuscles ? `\n🎯 **Nota:** Como priorizas ${prefs.focusMuscles}, haz 1 serie extra en esos ejercicios.` : ''}
-
-¿Listo para darle? 🔥 Si quieres cambiar algo o ajustar ejercicios, dime.`;
-    },
-
-    generateMuscleWorkout(lowerPrompt, profile, periodWeek) {
-        const muscles = {
-            pecho: { name: 'Pecho', exercises: ['bench-press', 'incline-bench', 'dumbbell-fly', 'cable-crossover', 'dip-chest', 'push-ups'], science: 'El pecho responde mejor a estiramiento bajo carga (aperturas) y presses en distintos ángulos. 10-20 series/semana es óptimo.' },
-            espalda: { name: 'Espalda', exercises: ['pull-ups', 'barbell-row', 'lat-pulldown', 'seated-row', 'deadlift', 'face-pulls'], science: 'La espalda necesita tracción horizontal (remos) para grosor y vertical (jalones/dominadas) para ancho. 15-20 series/semana.' },
-            hombro: { name: 'Hombros', exercises: ['ohp', 'lateral-raise', 'face-pulls', 'rear-delt-fly', 'front-raise', 'cable-lateral'], science: 'El deltoides lateral es la clave para hombros anchos. 15-25 series/semana de laterales. El anterior ya trabaja en presses.' },
-            pierna: { name: 'Piernas', exercises: ['squat', 'leg-press', 'romanian-deadlift', 'bulgarian-split', 'leg-extension', 'leg-curl', 'calf-raise'], science: 'Cuádriceps: ejercicios en estiramiento (sentadilla profunda, búlgara). Isquios: curl nórdico y RDL son los mejores.' },
-            biceps: { name: 'Bíceps', exercises: ['barbell-curl', 'incline-curl', 'hammer-curl', 'preacher-curl', 'cable-curl'], science: 'El bíceps crece mejor con estiramiento (curl inclinado) y variando agarre. 10-15 series/semana directas.' },
-            triceps: { name: 'Tríceps', exercises: ['close-grip-bench', 'overhead-extension', 'tricep-pushdown', 'dips', 'skull-crusher'], science: 'La cabeza larga del tríceps (la más grande) se trabaja mejor con overhead. 10-15 series/semana directas.' },
-            gluteo: { name: 'Glúteos', exercises: ['hip-thrust', 'bulgarian-split', 'romanian-deadlift', 'squat', 'cable-kickback'], science: 'Hip thrust = mayor activación EMG de glúteo. Combinar con ejercicios en estiramiento (RDL, búlgara profunda).' },
-            abdomen: { name: 'Core/Abdominales', exercises: ['hanging-leg-raise', 'cable-crunch', 'plank', 'russian-twist', 'ab-wheel'], science: 'Los abs se hacen en la cocina (deficit calórico). Para hipertrofia: ejercicios con carga progresiva, no 100 crunches.' }
-        };
-
-        let targetMuscle = null;
-        for (const [key, data] of Object.entries(muscles)) {
-            if (lowerPrompt.includes(key)) {
-                targetMuscle = data;
-                break;
-            }
-        }
-
-        if (!targetMuscle) {
-            targetMuscle = muscles.pecho; // default
-        }
-
-        const prs = Storage.getPRs();
-        const isDeload = periodWeek.deload;
-        const intensity = periodWeek.intensity;
-
-        const exerciseDetails = targetMuscle.exercises.map(exId => {
-            const ex = EXERCISES_DB.find(e => e.id === exId);
-            if (!ex) return null;
-            const pr = prs[exId];
-            const suggestedWeight = pr ? Math.round(pr.weight * (intensity / 100)) : null;
-            return { ...ex, suggestedWeight };
-        }).filter(Boolean);
-
-        return `💪 **Sesión de ${targetMuscle.name} - Máxima Efectividad**
-
-📊 Semana ${Storage.getCurrentWeek()}/12 | RPE: ${periodWeek.rpe}
-🧬 **Ciencia:** ${targetMuscle.science}
-${isDeload ? '\n🟢 DELOAD: Reduce todo al 60% y haz 2 series menos por ejercicio.\n' : ''}
-
----
-
-${exerciseDetails.slice(0, 6).map((ex, i) => `
-**${i + 1}. ${ex.icon} ${ex.name}** ${i < 2 ? '⭐ PRIORITARIO' : ''}
-   → ${isDeload ? ex.sets - 1 : ex.sets} series × ${ex.reps} reps
-   ${ex.suggestedWeight ? `→ Peso: ~${ex.suggestedWeight}kg` : '→ Usa un peso que te desafíe a RPE ' + periodWeek.rpe}
-   → Descanso: ${ex.rest}s
-   → 💡 ${ex.tips.join(' | ')}
-`).join('')}
-
----
-
-**📋 Protocolo de ejecución:**
-• Los 2 primeros ejercicios son COMPOUND → máximo esfuerzo (RPE ${periodWeek.rpe})
-• Los demás son AISLAMIENTO → pump y conexión mente-músculo
-• Última serie de cada ejercicio: técnica de intensidad (drop set, rest-pause o myo-reps)
-${!isDeload ? '• Anota TODO: peso, reps, sensación. La próxima vez intenta +1 rep o +2.5kg' : ''}
-
-**🔬 Tips avanzados para ${targetMuscle.name}:**
-• Tempo: 2-1-2 (excéntrica-pausa-concéntrica) para máxima tensión
-• Si un ejercicio no lo "sientes", baja peso y enfócate en el músculo
-• Estira el músculo 60s entre series para hipertrofia extra
-
-¿Quieres que ajuste algo? ¿Más volumen, menos tiempo, diferentes ejercicios?`;
-    },
-
-    generateExerciseAdvice(lowerPrompt, profile) {
-        // Buscar qué ejercicio preguntan
-        const exerciseMatch = EXERCISES_DB.find(ex => {
-            const nameNorm = ex.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-            return lowerPrompt.includes(nameNorm) || lowerPrompt.includes(ex.id.replace(/-/g, ' '));
+        let response = `**Entrenamiento de Hoy: ${todayPlan.name}**\nSemana ${Storage.getCurrentWeek()}/12 | Fase: ${periodWeek.phase} | RPE ${rpe}`;
+        if (isDeload) response += `\n\n*Semana de deload: enfocate en tecnica, peso ligero, sin fallo.*`;
+        
+        response += '\n\n---\n';
+        exercises.forEach((ex, i) => {
+            const weightStr = ex.suggestedWeight ? `${ex.suggestedWeight}kg` : 'peso moderado';
+            response += `\n**${i+1}. ${ex.name}**\n${ex.sets} series x ${ex.reps} | ${weightStr} | Descanso: ${ex.rest}s\n`;
         });
 
-        // Buscar qué músculo
-        const muscleMap = { pecho: 'Pecho', espalda: 'Espalda', hombro: 'Hombros', pierna: 'Piernas', biceps: 'Bíceps', triceps: 'Tríceps', core: 'Core', abdomen: 'Core' };
-        let targetMuscle = null;
-        for (const [key, val] of Object.entries(muscleMap)) {
-            if (lowerPrompt.includes(key)) { targetMuscle = val; break; }
+        response += `\n---\n\n**Duracion estimada:** ${isDeload ? '40-50' : '55-70'} min`;
+        response += `\n\n**Instrucciones:**\n• Calienta 5-10 min antes\n• ${isDeload ? 'No llegues al fallo, enfocate en conexion mente-musculo' : 'Ultima serie de cada ejercicio cerca del fallo (RPE ' + rpe + ')'}\n• Registra todos tus pesos para progresar`;
+        
+        return response;
+    },
+
+    genMuscleWorkout(input, profile, periodWeek) {
+        const muscleData = {
+            pecho: { name: 'Pecho', ids: ['bench-press','incline-bench','dumbbell-fly','cable-crossover','dip-chest','push-ups'], tip: 'El pecho crece mejor con estiramiento bajo carga y presses en distintos angulos. 12-18 series/semana optimo.' },
+            espalda: { name: 'Espalda', ids: ['pull-ups','barbell-row','lat-pulldown','seated-row','deadlift','face-pulls'], tip: 'Traccion vertical para ancho, horizontal para grosor. 15-22 series/semana.' },
+            hombro: { name: 'Hombros', ids: ['ohp','lateral-raise','face-pulls','rear-delt-fly','front-raise','cable-lateral'], tip: 'El deltoides lateral es clave para amplitud. 15-25 series/semana de laterales.' },
+            pierna: { name: 'Piernas', ids: ['squat','leg-press','romanian-deadlift','bulgarian-split','leg-extension','leg-curl','calf-raise'], tip: 'Profundidad completa en sentadilla > mas peso con medio rango.' },
+            biceps: { name: 'Biceps', ids: ['barbell-curl','incline-curl','hammer-curl','preacher-curl','cable-curl'], tip: 'Crece mejor en estiramiento (curl inclinado). 10-15 series/semana directas.' },
+            triceps: { name: 'Triceps', ids: ['close-grip-bench','overhead-extension','tricep-pushdown','dips','skull-crusher'], tip: 'La cabeza larga (la mas grande) se trabaja con overhead. 10-15 series/semana.' },
+            gluteo: { name: 'Gluteos', ids: ['hip-thrust','bulgarian-split','romanian-deadlift','squat','cable-kickback'], tip: 'Hip thrust = mayor activacion. Combinar con ejercicios en estiramiento.' },
+            abdomen: { name: 'Core', ids: ['hanging-leg-raise','cable-crunch','plank','russian-twist','ab-wheel'], tip: 'Los abs se revelan con deficit calorico. Para hipertrofia: carga progresiva, no 100 crunches.' },
+            core: { name: 'Core', ids: ['hanging-leg-raise','cable-crunch','plank','russian-twist','ab-wheel'], tip: 'Los abs se revelan con deficit calorico. Para hipertrofia: carga progresiva.' }
+        };
+
+        let target = null;
+        for (const [key, data] of Object.entries(muscleData)) {
+            if (input.includes(key)) { target = data; break; }
         }
+        if (!target) target = muscleData.pecho;
+
+        const prs = Storage.getPRs();
+        const exercises = target.ids.map(id => {
+            const ex = EXERCISES_DB.find(e => e.id === id);
+            if (!ex) return null;
+            const pr = prs[id];
+            const weight = pr ? Math.round(pr.weight * (periodWeek.intensity/100)) : null;
+            return { ...ex, weight };
+        }).filter(Boolean).slice(0, 6);
+
+        let response = `**Sesion de ${target.name}**\nSemana ${Storage.getCurrentWeek()}/12 | RPE ${periodWeek.rpe}\n\n*${target.tip}*\n\n---\n`;
+        
+        exercises.forEach((ex, i) => {
+            const weightStr = ex.weight ? `~${ex.weight}kg` : `RPE ${periodWeek.rpe}`;
+            const priority = i < 2 ? ' (prioritario)' : '';
+            response += `\n**${i+1}. ${ex.name}**${priority}\n${ex.sets} series x ${ex.reps} | ${weightStr} | Descanso: ${ex.rest}s\n`;
+        });
+
+        response += `\n---\n\n**Protocolo:**\n• Ejercicios 1-2: compuestos, maximo esfuerzo\n• Ejercicios 3+: aislamiento, pump y conexion mente-musculo\n• Ultima serie: tecnica de intensidad (drop set o rest-pause)`;
+        return response;
+    },
+
+
+    genExerciseInfo(input, profile) {
+        const exerciseMatch = EXERCISES_DB.find(ex => {
+            const nameNorm = ex.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            return input.includes(nameNorm) || input.includes(ex.id.replace(/-/g, ' '));
+        });
 
         if (exerciseMatch) {
             const pr = Storage.getPRs()[exerciseMatch.id];
-            return `📚 **${exerciseMatch.name}** ${exerciseMatch.icon}
-
-**Categoría:** ${exerciseMatch.category === 'compound' ? 'Compuesto (multi-articular) ⭐' : 'Aislamiento'}
-**Músculo principal:** ${exerciseMatch.muscle}
-**Equipamiento:** ${exerciseMatch.equipment}
-**Dificultad:** ${exerciseMatch.difficulty}
-${pr ? `**🏆 Tu PR:** ${pr.weight}kg` : ''}
-
-**📋 Ejecución óptima:**
-${exerciseMatch.description}
-
-**✅ Claves de técnica:**
-${exerciseMatch.tips.map(t => `• ${t}`).join('\n')}
-
-**📊 Parámetros para hipertrofia:**
-• Series: ${exerciseMatch.sets} (${exerciseMatch.category === 'compound' ? 'hasta 5 si priorizas este músculo' : '3-4 suficientes'})
-• Repeticiones: ${exerciseMatch.reps}
-• Descanso: ${exerciseMatch.rest}s ${exerciseMatch.category === 'compound' ? '(hasta 3 min si vas muy pesado)' : ''}
-• Tempo: 2-0-1-0 (2s excéntrica, sin pausa, 1s concéntrica)
-
-**🔬 ¿Qué dice la ciencia?**
-${exerciseMatch.category === 'compound' ? 
-'Los ejercicios compuestos son la BASE de cualquier programa. Reclutan más fibras musculares, permiten más carga y generan mayor respuesta hormonal. Priorízalos al inicio de la sesión.' :
-'Los ejercicios de aislamiento son ideales al final de la sesión para "rematar" el músculo. Usa técnicas de intensidad (drop sets, myo-reps) aquí.'}
-
-**🔄 Alternativas:**
-${EXERCISES_DB.filter(e => e.muscle === exerciseMatch.muscle && e.id !== exerciseMatch.id).slice(0, 3).map(e => `• ${e.name} (${e.equipment})`).join('\n')}
-
-¿Quieres que te explique la técnica con más detalle o te sugiera en qué parte de tu rutina ponerlo?`;
+            let r = `**${exerciseMatch.name}**\n\n`;
+            r += `Tipo: ${exerciseMatch.category === 'compound' ? 'Compuesto' : 'Aislamiento'} | Musculo: ${exerciseMatch.muscle} | Equipo: ${exerciseMatch.equipment}\n`;
+            if (pr) r += `Tu PR: **${pr.weight}kg**\n`;
+            r += `\n**Ejecucion:**\n${exerciseMatch.description}\n`;
+            r += `\n**Parametros optimos:**\n• Series: ${exerciseMatch.sets} | Reps: ${exerciseMatch.reps} | Descanso: ${exerciseMatch.rest}s\n• Tempo: 2-0-1-0 (2s excentrica, 1s concentrica)\n`;
+            r += `\n**Claves de tecnica:**\n${exerciseMatch.tips.map(t => '• ' + t).join('\n')}\n`;
+            const alts = EXERCISES_DB.filter(e => e.muscle === exerciseMatch.muscle && e.id !== exerciseMatch.id).slice(0, 3);
+            if (alts.length) r += `\n**Alternativas:** ${alts.map(e => e.name).join(', ')}`;
+            return r;
         }
+
+        // Find by muscle
+        const muscleMap = {pecho:'Pecho',espalda:'Espalda',hombro:'Hombros',pierna:'Piernas',biceps:'Biceps',triceps:'Triceps',core:'Core',abdomen:'Core'};
+        let targetMuscle = null;
+        for (const [k,v] of Object.entries(muscleMap)) { if (input.includes(k)) { targetMuscle = v; break; } }
 
         if (targetMuscle) {
-            const muscleExercises = EXERCISES_DB.filter(e => e.muscle === targetMuscle);
-            const ranked = muscleExercises.sort((a, b) => (a.category === 'compound' ? -1 : 1));
-
-            return `🏆 **Mejores Ejercicios para ${targetMuscle} (por efectividad)**
-
-Ranking basado en activación EMG, potencial de sobrecarga progresiva y practicidad:
-
-${ranked.map((ex, i) => `
-**${i + 1}. ${ex.icon} ${ex.name}** ${i < 2 ? '⭐ TOP' : ''}
-   ${ex.category === 'compound' ? '🔴 Compound' : '🔵 Aislamiento'} | ${ex.equipment} | ${ex.sets}x${ex.reps}
-   → ${ex.description.substring(0, 80)}...
-`).join('')}
-
-**💡 Recomendación para tu rutina:**
-• Elige 2 compuestos + 2-3 aislamientos por sesión de ${targetMuscle}
-• Total semanal óptimo: ${targetMuscle === 'Piernas' ? '15-20' : targetMuscle === 'Espalda' ? '15-20' : '10-18'} series directas
-• Varía ejercicios cada 4-6 semanas para nuevo estímulo
-
-¿Quieres que arme una sesión completa de ${targetMuscle} o te explique algún ejercicio en detalle?`;
+            const exs = EXERCISES_DB.filter(e => e.muscle === targetMuscle).sort((a,b) => a.category === 'compound' ? -1 : 1);
+            let r = `**Mejores ejercicios para ${targetMuscle}**\n\n`;
+            exs.slice(0, 8).forEach((ex, i) => {
+                r += `**${i+1}. ${ex.name}** (${ex.category === 'compound' ? 'compuesto' : 'aislamiento'})\n${ex.sets}x${ex.reps} | ${ex.equipment}\n\n`;
+            });
+            r += `**Recomendacion:** 2 compuestos + 2-3 aislamientos por sesion. Total semanal: 12-18 series directas.`;
+            return r;
         }
 
-        return `📚 **Sobre Selección de Ejercicios**
-
-Pregúntame específicamente y te ayudo:
-• "¿Cuál es el mejor ejercicio para pecho?" → Te doy un ranking con ciencia
-• "¿Cómo hago peso muerto?" → Te explico la técnica paso a paso
-• "Alternativa a sentadilla" → Te doy opciones según tu equipamiento
-• "Ejercicios para espalda ancha" → Te diseño una sesión completa
-
-¿Qué músculo o ejercicio te interesa?`;
+        return `Dime que ejercicio o musculo te interesa y te doy informacion detallada: tecnica, parametros, alternativas y como incluirlo en tu rutina.`;
     },
 
-
-    generateFullProgram(profile, periodWeek, lowerPrompt, prefs) {
-        const days = profile.daysPerWeek || 4;
-        const level = profile.level || 'intermedio';
-        const goal = profile.goal || 'ganar músculo';
-        const week = Storage.getCurrentWeek();
-
-        let templateKey;
-        // Si el usuario pide algo específico
-        if (lowerPrompt.includes('ppl') || lowerPrompt.includes('push pull')) templateKey = 'ppl';
-        else if (lowerPrompt.includes('upper') || lowerPrompt.includes('torso')) templateKey = 'upperLower';
-        else if (lowerPrompt.includes('full body') || lowerPrompt.includes('cuerpo completo')) templateKey = 'fullBody';
-        else if (lowerPrompt.includes('bro')) templateKey = 'bro';
-        else {
-            // Autoselección óptima
-            if (days <= 3) templateKey = 'fullBody';
-            else if (days === 4) templateKey = 'upperLower';
-            else if (days === 5) templateKey = 'bro';
-            else templateKey = 'ppl';
-        }
-
-        const template = ROUTINE_TEMPLATES[templateKey];
-
-        return `📋 **Tu Programa Personalizado - ${template.name}**
-
-👤 ${profile.name || 'Atleta'} | ${level} | ${goal}
-📅 ${days} días/semana | ⏱️ ${template.duration}/sesión
-📊 Semana ${week}/12 | Fase: ${periodWeek.phase}
-${prefs.focusMuscles ? `🎯 Prioridad: ${prefs.focusMuscles}` : ''}
-
----
-
-**¿Por qué ${template.name}?**
-${templateKey === 'ppl' ? 'Con 6 días puedes trabajar cada músculo 2x/semana con volumen alto. Es el GOLD STANDARD para hipertrofia.' : 
-templateKey === 'upperLower' ? 'Con 4 días consigues frecuencia 2x/semana por músculo con buen balance de volumen y recuperación. Ideal para tu disponibilidad.' :
-templateKey === 'fullBody' ? 'Con 3 días, full body te da frecuencia 3x/semana por músculo. Los principiantes progresan BRUTAL con esto por las adaptaciones neurales.' :
-'Con 5 días puedes destruir cada músculo con alto volumen. Para avanzados que necesitan mucho estímulo por grupo.'}
-
----
-
-**📅 DISTRIBUCIÓN SEMANAL:**
-
-${template.days.map((day, i) => {
-    const exercises = day.exercises.map(exId => {
-        const ex = EXERCISES_DB.find(e => e.id === exId);
-        return ex ? `   • ${ex.name} - ${ex.sets}x${ex.reps}` : '';
-    }).filter(Boolean).join('\n');
-    return `
-**Día ${i + 1}: ${day.name}**
-${exercises}`;
-}).join('\n')}
-
----
-
-**⚡ Progresión Semanal (Fase: ${periodWeek.phase}):**
-• Intensidad actual: ${periodWeek.intensity}% | RPE: ${periodWeek.rpe}
-• ${periodWeek.deload ? '🟢 DELOAD esta semana: reduce peso al 60%, disfruta la recuperación' : `Intenta subir 2.5kg en compounds si completaste todas las reps la semana pasada`}
-• Volumen: ${periodWeek.volume}
-
-**🔑 Reglas inquebrantables:**
-1. NUNCA faltes 2 días seguidos
-2. Si no progresas en peso → añade 1 rep → luego 1 serie → luego cambia ejercicio
-3. Come suficiente proteína (${Math.round((profile.weight || 70) * 2)}g/día)
-4. Duerme 7-9h. Sin sueño no creces.
-5. Cada 4-5 semanas: semana de deload
-
-${prefs.deadline ? `\n📆 **Meta temporal: ${prefs.deadline}**\nCon tu programa actual y buena adherencia, ${goal.includes('perder') ? 'puedes perder 0.5-1kg/semana de forma sostenible' : 'puedes ganar 0.5-1kg de músculo/mes'}.` : ''}
-
-¿Quieres que detalle algún día, cambie ejercicios, o ajuste el volumen?`;
-    },
-
-    generateTimelinePlan(lowerPrompt, profile, periodWeek) {
-        const weight = profile.weight || 70;
-        const goal = profile.goal || 'ganar músculo';
-        const level = profile.level || 'intermedio';
-
-        // Intentar extraer el plazo
-        let weeks = 12;
-        const monthMatch = lowerPrompt.match(/(\d+)\s*mes/);
-        const weekMatch = lowerPrompt.match(/(\d+)\s*semana/);
-        if (monthMatch) weeks = parseInt(monthMatch[1]) * 4;
-        if (weekMatch) weeks = parseInt(weekMatch[1]);
-
-        // Detectar eventos
-        let event = '';
-        if (lowerPrompt.includes('verano')) { event = 'el verano'; weeks = 16; }
-        if (lowerPrompt.includes('boda')) event = 'la boda';
-        if (lowerPrompt.includes('playa')) event = 'la playa';
-        if (lowerPrompt.includes('vacacion')) event = 'las vacaciones';
-
-        // Calcular resultados realistas
-        let muscleGain, fatLoss, strengthGain;
-        if (level === 'principiante') {
-            muscleGain = (weeks / 4) * 0.8; // kg por mes
-            fatLoss = (weeks / 4) * 2; // kg por mes en déficit
-            strengthGain = '30-50%';
-        } else if (level === 'intermedio') {
-            muscleGain = (weeks / 4) * 0.4;
-            fatLoss = (weeks / 4) * 1.5;
-            strengthGain = '10-20%';
-        } else {
-            muscleGain = (weeks / 4) * 0.2;
-            fatLoss = (weeks / 4) * 1.5;
-            strengthGain = '5-10%';
-        }
-
-        return `📅 **Plan con Timeline: ${weeks} Semanas ${event ? 'para ' + event : ''}**
-
-👤 ${profile.name || 'Atleta'} | ${weight}kg | ${level} | Objetivo: ${goal}
-
----
-
-**📊 ¿Qué puedes lograr REALISTAMENTE en ${weeks} semanas?**
-
-${goal.includes('perder') || goal.includes('definir') ? `
-🔥 **Pérdida de grasa:** ${Math.round(fatLoss * 10) / 10}kg (a ${Math.round(fatLoss/weeks*7*100)/100}kg/semana)
-💪 **Músculo:** Puedes mantener todo (o ganar ${level === 'principiante' ? '1-2kg' : 'algo'} si eres nuevo)
-📏 **Cintura:** -${Math.round(weeks * 0.4)}cm aprox
-🏋️ **Fuerza:** Se mantiene o sube ligeramente
-👁️ **Visual:** Cambio NOTABLE a partir de semana ${Math.min(4, weeks)}
-` : `
-💪 **Ganancia muscular:** ${Math.round(muscleGain * 10) / 10}kg de músculo puro
-🏋️ **Fuerza:** +${strengthGain} en los básicos (sentadilla, press, peso muerto)
-📏 **Medidas:** +${Math.round(weeks * 0.15)}cm de brazo, +${Math.round(weeks * 0.3)}cm de pecho
-⚖️ **Peso total:** +${Math.round(muscleGain * 1.5)}kg (algo de grasa incluida, normal)
-👁️ **Visual:** La ropa te queda diferente desde semana 4-6
-`}
-
----
-
-**🗓️ PLAN POR FASES:**
-
-**Fase 1 - Semanas 1-${Math.min(4, weeks)} (Adaptación/Inicio):**
-• Aprender movimientos, crear hábito, progresión lineal
-• ${goal.includes('perder') ? 'Déficit moderado: -300kcal' : 'Superávit ligero: +200kcal'}
-• Espera: adaptación neural, DOMS iniciales, primeros cambios de fuerza
-
-**Fase 2 - Semanas ${Math.min(5, weeks)}-${Math.min(8, weeks)} (Acumulación):**
-• Subir volumen e intensidad gradualmente
-• ${goal.includes('perder') ? 'Déficit: -400-500kcal' : 'Superávit: +250-350kcal'}
-• Espera: cambios visibles empiezan, ropa queda diferente
-
-${weeks > 8 ? `**Fase 3 - Semanas ${Math.min(9, weeks)}-${weeks} (Intensificación/Pico):**
-• Máxima intensidad, técnicas avanzadas
-• ${goal.includes('perder') ? 'Mantener déficit, incluir refeeds' : 'Mantener superávit, buscar PRs'}
-• Espera: transformación notable, la gente pregunta "¿qué hiciste?"` : ''}
-
----
-
-**⚡ ACCIONES INMEDIATAS (empieza HOY):**
-1. ${goal.includes('perder') ? `Calorías: ${Math.round(weight * 26)}kcal/día` : `Calorías: ${Math.round(weight * 35)}kcal/día`}
-2. Proteína: ${Math.round(weight * 2.2)}g/día SIN EXCEPCIÓN
-3. Entrena ${profile.daysPerWeek || 4}x/semana, NUNCA faltes
-4. Pésate 3x/semana y saca promedio
-5. Fotos cada 2 semanas (misma luz, misma pose)
-6. Duerme 7-9h CADA noche
-
-**💡 Verdad incómoda:** El 90% del resultado depende de ADHERENCIA. No del programa perfecto. El programa que sigues consistentemente siempre gana.
-
-¿Quieres que detalle el plan nutricional, la rutina específica, o ambos?`;
-    },
-
-    generateDetailedNutrition(lowerPrompt, profile) {
-        const weight = profile.weight || 70;
-        const height = profile.height || 175;
-        const age = profile.age || 25;
-        const gender = profile.gender || 'hombre';
-        const goal = profile.goal || 'ganar músculo';
-
-        // Mifflin-St Jeor
-        let bmr;
-        if (gender === 'hombre' || gender === 'masculino') {
-            bmr = 10 * weight + 6.25 * height - 5 * age + 5;
-        } else {
-            bmr = 10 * weight + 6.25 * height - 5 * age - 161;
-        }
-
-        const tdee = Math.round(bmr * 1.55); // Factor moderadamente activo
-
-        let targetCals, protein, carbs, fats, strategy;
-        if (goal.includes('perder') || goal.includes('definir') || goal.includes('bajar')) {
-            targetCals = Math.round(tdee - 400);
-            protein = Math.round(weight * 2.3);
-            fats = Math.round(weight * 0.85);
-            carbs = Math.round((targetCals - protein * 4 - fats * 9) / 4);
-            strategy = 'Déficit calórico moderado (-400kcal). Proteína ALTA para preservar músculo.';
-        } else if (goal.includes('ganar') || goal.includes('volumen') || goal.includes('musculo')) {
-            targetCals = Math.round(tdee + 300);
-            protein = Math.round(weight * 2);
-            fats = Math.round(weight * 1);
-            carbs = Math.round((targetCals - protein * 4 - fats * 9) / 4);
-            strategy = 'Lean bulk (+300kcal). Superávit controlado para minimizar ganancia de grasa.';
-        } else {
-            targetCals = tdee;
-            protein = Math.round(weight * 2);
-            fats = Math.round(weight * 1);
-            carbs = Math.round((targetCals - protein * 4 - fats * 9) / 4);
-            strategy = 'Mantenimiento/recomposición. Come bien y entrena duro.';
-        }
-
-        // Detectar si pregunta algo específico
-        if (lowerPrompt.includes('desayuno') || lowerPrompt.includes('que desayun')) {
-            return this.generateMealIdeas('desayuno', protein, carbs, fats, targetCals, goal);
-        }
-        if (lowerPrompt.includes('almuerzo') || lowerPrompt.includes('que almuerz')) {
-            return this.generateMealIdeas('almuerzo', protein, carbs, fats, targetCals, goal);
-        }
-        if (lowerPrompt.includes('cena') || lowerPrompt.includes('que cen')) {
-            return this.generateMealIdeas('cena', protein, carbs, fats, targetCals, goal);
-        }
-        if (lowerPrompt.includes('pre entreno') || lowerPrompt.includes('pre-entreno') || lowerPrompt.includes('antes de entrenar')) {
-            return this.generateMealIdeas('pre-entreno', protein, carbs, fats, targetCals, goal);
-        }
-        if (lowerPrompt.includes('post entreno') || lowerPrompt.includes('despues de entrenar')) {
-            return this.generateMealIdeas('post-entreno', protein, carbs, fats, targetCals, goal);
-        }
-
-        return `🥗 **Plan Nutricional Completo y Personalizado**
-
-👤 ${profile.name || 'Atleta'} | ${weight}kg | ${height}cm | ${age} años
-🎯 Objetivo: ${goal}
-📊 Estrategia: ${strategy}
-
----
-
-**📐 TUS NÚMEROS (calculados con Mifflin-St Jeor):**
-• BMR (metabolismo basal): ${Math.round(bmr)} kcal
-• TDEE (gasto total): ${tdee} kcal
-• 🎯 **Objetivo diario: ${targetCals} kcal**
-
-**📊 MACRONUTRIENTES:**
-| Macro | Gramos | Calorías | % |
-|-------|--------|----------|---|
-| 🥩 Proteína | **${protein}g** | ${protein * 4} kcal | ${Math.round(protein*4/targetCals*100)}% |
-| 🍚 Carbos | **${carbs}g** | ${carbs * 4} kcal | ${Math.round(carbs*4/targetCals*100)}% |
-| 🥑 Grasas | **${fats}g** | ${fats * 9} kcal | ${Math.round(fats*9/targetCals*100)}% |
-
----
-
-**🍽️ DISTRIBUCIÓN EN 5 COMIDAS:**
-
-**7:00 - Desayuno (~${Math.round(targetCals * 0.25)} kcal)**
-→ 40g proteína + carbos complejos + fruta
-• Opción A: 4 claras + 2 huevos + 80g avena + plátano
-• Opción B: Yogur griego 250g + granola + frutas + 1 scoop whey
-• Opción C: Tostadas integrales + aguacate + pavo + huevo
-
-**10:30 - Snack (~${Math.round(targetCals * 0.12)} kcal)**
-→ 25g proteína + grasas saludables
-• 30g frutos secos + fruta + yogur griego
-• O batido: whey + plátano + mantequilla de maní
-
-**13:30 - Almuerzo (~${Math.round(targetCals * 0.30)} kcal)**
-→ 50g proteína + carbos + verduras abundantes
-• 200g pechuga/salmón/ternera + ${Math.round(carbs * 0.3)}g arroz (crudo) + ensalada grande + aceite oliva
-
-**16:30 - Pre-entreno (~${Math.round(targetCals * 0.15)} kcal)**
-→ 30g proteína + carbos rápidos
-• Batido whey + plátano + 40g avena + miel
-• O: pan + pavo + fruta
-
-**20:30 - Cena (~${Math.round(targetCals * 0.18)} kcal)**
-→ 40g proteína + verduras + grasas
-• 180g pescado/pollo + verduras salteadas + ${goal.includes('perder') ? 'aguacate pequeño' : 'arroz/pasta + aceite'}
-
----
-
-**💧 HIDRATACIÓN:** ${Math.round(weight * 0.035)}L/día mínimo (más en días de entreno)
-
-**💡 REGLAS DE ORO:**
-1. ${protein}g de proteína NO son negociables. Si un día no llegas → batido extra
-2. Pesa tu comida la primera semana. Después ya "calibras" el ojo
-3. Carbos más altos en días de entreno, más bajos en descanso
-4. Vegetales en CADA comida principal (saciedad + micronutrientes)
-5. 1-2 comidas "libres" a la semana no arruinan nada. Disfruta.
-
-¿Quieres recetas específicas, lista de compras, o ideas para alguna comida?`;
-    },
-
-    generateMealIdeas(meal, protein, carbs, fats, totalCals, goal) {
-        const meals = {
-            'desayuno': {
-                title: 'Ideas de Desayuno',
-                cals: Math.round(totalCals * 0.25),
-                options: [
-                    { name: 'Power Oats', desc: '80g avena + 1 scoop whey + plátano + canela + nueces', macros: 'P:40g C:65g G:12g' },
-                    { name: 'Huevos Champion', desc: '4 claras + 2 enteros + tostada integral + aguacate + tomate', macros: 'P:35g C:30g G:18g' },
-                    { name: 'Bowl Griego', desc: '250g yogur griego + granola + frutos rojos + miel + semillas', macros: 'P:30g C:45g G:10g' },
-                    { name: 'Pancakes Fitness', desc: '3 pancakes (avena+claras+plátano) + sirope sin azúcar + mantequilla maní', macros: 'P:35g C:55g G:15g' },
-                    { name: 'Smoothie Beast', desc: 'Whey + plátano + avena + leche + mantequilla maní + cacao', macros: 'P:40g C:50g G:18g' }
-                ]
-            },
-            'almuerzo': {
-                title: 'Ideas de Almuerzo',
-                cals: Math.round(totalCals * 0.30),
-                options: [
-                    { name: 'Pollo & Arroz Classic', desc: '200g pechuga + 100g arroz + brócoli + aceite oliva', macros: 'P:48g C:80g G:12g' },
-                    { name: 'Bowl de Salmón', desc: '180g salmón + quinoa + aguacate + edamame + salsa soja', macros: 'P:42g C:55g G:22g' },
-                    { name: 'Pasta Boloñesa Fit', desc: '100g pasta integral + 200g carne magra + salsa tomate + parmesano', macros: 'P:50g C:85g G:15g' },
-                    { name: 'Tacos Proteicos', desc: '3 tortillas maíz + 200g ternera + pico de gallo + frijoles + guacamole', macros: 'P:45g C:60g G:18g' },
-                    { name: 'Stir-fry Asiático', desc: '200g pollo + arroz + verduras mix + salsa teriyaki + sésamo', macros: 'P:45g C:75g G:10g' }
-                ]
-            },
-            'cena': {
-                title: 'Ideas de Cena',
-                cals: Math.round(totalCals * 0.18),
-                options: [
-                    { name: 'Salmón Mediterráneo', desc: '180g salmón + ensalada grande + aceite oliva + limón', macros: 'P:38g C:10g G:18g' },
-                    { name: 'Wrap de Pavo', desc: 'Tortilla integral + 150g pavo + hummus + verduras', macros: 'P:35g C:30g G:12g' },
-                    { name: 'Revuelto Nocturno', desc: '4 huevos + espinacas + champiñones + queso feta + tostada', macros: 'P:32g C:20g G:22g' },
-                    { name: 'Atún Bowl', desc: '200g atún + aguacate + pepino + arroz integral + soja', macros: 'P:42g C:35g G:15g' },
-                    { name: 'Casein Pudding', desc: '1 scoop caseína + yogur griego + frutos rojos + dark chocolate', macros: 'P:40g C:25g G:8g' }
-                ]
-            },
-            'pre-entreno': {
-                title: 'Ideas Pre-Entreno (1-2h antes)',
-                cals: Math.round(totalCals * 0.15),
-                options: [
-                    { name: 'Batido Express', desc: '1 scoop whey + plátano + 40g avena + miel', macros: 'P:30g C:55g G:5g' },
-                    { name: 'Pan con Pavo', desc: '2 rebanadas pan + 100g pavo + plátano', macros: 'P:28g C:50g G:4g' },
-                    { name: 'Rice Cakes Stack', desc: '3 tortitas de arroz + mantequilla maní + miel + plátano', macros: 'P:12g C:55g G:10g' },
-                    { name: 'Bowl Energía', desc: 'Yogur + granola + plátano + miel', macros: 'P:20g C:60g G:8g' }
-                ]
-            },
-            'post-entreno': {
-                title: 'Ideas Post-Entreno (dentro de 2h)',
-                cals: Math.round(totalCals * 0.20),
-                options: [
-                    { name: 'Shake Anabólico', desc: 'Whey + plátano + avena + leche + creatina', macros: 'P:40g C:60g G:8g' },
-                    { name: 'Arroz & Pollo Express', desc: '150g pollo + arroz blanco + salsa + fruta', macros: 'P:38g C:70g G:8g' },
-                    { name: 'Cereal Gains', desc: '80g cereal + leche + whey + plátano', macros: 'P:35g C:65g G:6g' }
-                ]
-            }
-        };
-
-        const mealData = meals[meal] || meals['desayuno'];
-        return `🍽️ **${mealData.title} (~${mealData.cals} kcal)**
-
-${mealData.options.map((opt, i) => `
-**${i + 1}. ${opt.name}**
-   📝 ${opt.desc}
-   📊 ${opt.macros}
-`).join('')}
-
-💡 **Tips para ${meal}:**
-${meal === 'desayuno' ? '• Come dentro de 1-2h de despertar\n• Incluye proteína + carbos complejos\n• Es la comida que te da energía para el día' :
-meal === 'pre-entreno' ? '• Come 1-2h antes, no justo antes\n• Prioriza carbos simples + proteína\n• Evita mucha grasa (digestion lenta)\n• Si entrenas temprano, un batido rápido basta' :
-meal === 'post-entreno' ? '• La "ventana anabólica" es 4-6h, no 30min\n• Prioriza proteína rápida (whey) + carbos\n• Es el mejor momento para carbos simples' :
-'• Distribuye proteína uniformemente en todas las comidas\n• No te saltes comidas, mejor reduce porciones'}
-
-¿Quieres más opciones, recetas detalladas, o ideas para otro momento del día?`;
-    },
-
-
-    generateDetailedAssessment(profile, periodWeek) {
-        const weight = profile.weight || 70;
-        const height = profile.height || 170;
-        const age = profile.age || 25;
-        const bmi = (weight / ((height/100) ** 2)).toFixed(1);
-        const week = Storage.getCurrentWeek();
-        const workouts = Storage.getWorkoutHistory();
-        const prs = Storage.getPRs();
-        const measurements = Storage.getMeasurements();
-        const gender = profile.gender || 'hombre';
-
-        // Calcular FFM estimado (si no tiene mucha grasa)
-        const ffmi = bmi < 30 ? ((weight * (1 - 0.15)) / ((height/100)**2)).toFixed(1) : '?';
-
-        // Fuerza relativa
-        const benchPR = prs['bench-press'] ? prs['bench-press'].weight : 0;
-        const squatPR = prs['squat'] ? prs['squat'].weight : 0;
-        const deadliftPR = prs['deadlift'] ? prs['deadlift'].weight : 0;
-        const total = benchPR + squatPR + deadliftPR;
-        const wilks = total > 0 ? Math.round(total / weight * 100) : 0;
-
-        // Consistencia
-        const expectedWorkouts = week * (profile.daysPerWeek || 4);
-        const adherence = expectedWorkouts > 0 ? Math.round(workouts.length / expectedWorkouts * 100) : 0;
-
-        let strengthLevel;
-        if (benchPR / weight > 1.5) strengthLevel = 'Avanzado';
-        else if (benchPR / weight > 1.0) strengthLevel = 'Intermedio';
-        else if (benchPR / weight > 0.7) strengthLevel = 'Principiante avanzado';
-        else strengthLevel = 'Principiante';
-
-        return `📊 **VALORACIÓN COMPLETA - ${profile.name || 'Atleta'}**
-
----
-
-**📐 COMPOSICIÓN CORPORAL:**
-• Peso: ${weight}kg | Altura: ${height}cm
-• IMC: ${bmi} ${bmi < 18.5 ? '(bajo peso)' : bmi < 25 ? '(normal ✓)' : bmi < 30 ? '(sobrepeso)' : '(obesidad)'}
-• FFMI estimado: ~${ffmi} ${parseFloat(ffmi) > 22 ? '(excelente desarrollo muscular)' : parseFloat(ffmi) > 20 ? '(buen desarrollo)' : '(hay mucho potencial de crecimiento)'}
-• % Grasa estimado: ${bmi < 22 ? '10-14%' : bmi < 25 ? '14-18%' : bmi < 28 ? '18-24%' : '24%+'} (basado en IMC, una foto sería más precisa)
-
-**🏋️ FUERZA (basado en PRs registrados):**
-${benchPR > 0 || squatPR > 0 || deadliftPR > 0 ? `
-• Press banca: ${benchPR > 0 ? benchPR + 'kg (' + (benchPR/weight).toFixed(2) + 'x peso corporal)' : 'Sin registrar'}
-• Sentadilla: ${squatPR > 0 ? squatPR + 'kg (' + (squatPR/weight).toFixed(2) + 'x peso corporal)' : 'Sin registrar'}
-• Peso muerto: ${deadliftPR > 0 ? deadliftPR + 'kg (' + (deadliftPR/weight).toFixed(2) + 'x peso corporal)' : 'Sin registrar'}
-• Total: ${total}kg | Ratio fuerza/peso: ${wilks}%
-• **Nivel de fuerza: ${strengthLevel}**
-
-📏 Estándares (${gender === 'hombre' ? 'hombres' : 'mujeres'}):
-   Bench: 1.25x = intermedio, 1.5x = avanzado
-   Squat: 1.5x = intermedio, 2x = avanzado
-   Deadlift: 1.75x = intermedio, 2.5x = avanzado` :
-'❗ No tienes PRs registrados aún. Empieza a entrenar con la app para trackear tu progreso.'}
-
-**📈 ADHERENCIA AL PROGRAMA:**
-• Semana: ${week}/12
-• Entrenamientos completados: ${workouts.length}/${expectedWorkouts} esperados
-• Adherencia: **${adherence}%** ${adherence >= 80 ? '🟢 Excelente' : adherence >= 60 ? '🟡 Buena, puedes mejorar' : '🔴 Baja, necesitas más consistencia'}
-${measurements.length > 1 ? `
-**📏 CAMBIOS EN MEDIDAS:**
-• Peso inicial → actual: ${measurements[0].weight || '?'}kg → ${measurements[measurements.length-1].weight || weight}kg
-${measurements[0].bodyFat && measurements[measurements.length-1].bodyFat ? `• % Grasa: ${measurements[0].bodyFat}% → ${measurements[measurements.length-1].bodyFat}%` : ''}` : ''}
-
----
-
-**🎯 PLAN DE ACCIÓN (próximas 4 semanas):**
-
-${profile.goal && profile.goal.includes('perder') ? `
-1. **Nutrición:** ${Math.round(weight * 26)} kcal/día con ${Math.round(weight * 2.2)}g proteína
-2. **Entreno:** Mantén intensidad, reduce volumen ligeramente
-3. **Cardio:** Añade 3-4 sesiones de 20-30min LISS
-4. **Peso objetivo 4 semanas:** ~${(weight - 2).toFixed(1)}kg (-2kg)
-` : `
-1. **Nutrición:** ${Math.round(weight * 34)} kcal/día con ${Math.round(weight * 2)}g proteína
-2. **Entreno:** Progresión en todos los compuestos +2.5kg/semana
-3. **Volumen:** Aumenta 1-2 series/músculo/semana si te recuperas bien
-4. **Peso objetivo 4 semanas:** ~${(weight + 1.5).toFixed(1)}kg (+1.5kg lean)
-`}
-
-📸 **Para una valoración VISUAL precisa**, envíame una foto de frente y lateral. Puedo estimar tu % grasa y señalar puntos fuertes/débiles específicos.
-
-¿Algo que quieras que profundice?`;
-    },
-
-    generateDetailedProgress(profile) {
-        const workouts = Storage.getWorkoutHistory();
-        const measurements = Storage.getMeasurements();
-        const prs = Storage.getPRs();
-        const week = Storage.getCurrentWeek();
-
-        const last7 = workouts.filter(w => new Date(w.date) > new Date(Date.now() - 7*24*60*60*1000));
-        const last30 = workouts.filter(w => new Date(w.date) > new Date(Date.now() - 30*24*60*60*1000));
-
-        const weekVolume = last7.reduce((sum, w) => sum + (w.totalVolume || 0), 0);
-        const monthVolume = last30.reduce((sum, w) => sum + (w.totalVolume || 0), 0);
-
-        const prList = Object.entries(prs).map(([id, data]) => {
-            const ex = EXERCISES_DB.find(e => e.id === id);
-            return { name: ex ? ex.name : id, weight: data.weight, date: data.date };
-        }).sort((a, b) => new Date(b.date) - new Date(a.date));
-
-        return `📈 **REPORTE DE PROGRESO DETALLADO**
-
-📅 Semana ${week}/12 | ${profile.name || 'Atleta'}
-
----
-
-**📊 RESUMEN DE ACTIVIDAD:**
-• Total histórico: ${workouts.length} entrenamientos
-• Últimos 7 días: ${last7.length} sesiones (${last7.length >= (profile.daysPerWeek || 4) ? '✅ objetivo cumplido' : '⚠️ falta consistencia'})
-• Últimos 30 días: ${last30.length} sesiones
-• Volumen semanal: ${weekVolume > 1000 ? (weekVolume/1000).toFixed(1) + 'k' : weekVolume}kg
-• Volumen mensual: ${monthVolume > 1000 ? (monthVolume/1000).toFixed(1) + 'k' : monthVolume}kg
-
-**🏆 PRs RECIENTES:**
-${prList.length > 0 ? prList.slice(0, 5).map(pr => `• ${pr.name}: **${pr.weight}kg** (${Helpers.formatDate(pr.date)})`).join('\n') : '• Aún sin PRs registrados'}
-
-${measurements.length > 0 ? `
-**⚖️ EVOLUCIÓN DE PESO:**
-${measurements.slice(-5).map(m => `• ${Helpers.formatDate(m.date)}: ${m.weight}kg ${m.bodyFat ? '| ' + m.bodyFat + '% grasa' : ''}`).join('\n')}
-${measurements.length >= 2 ? `\n📐 Cambio total: ${((measurements[measurements.length-1].weight || 0) - (measurements[0].weight || 0)).toFixed(1)}kg` : ''}
-` : ''}
-
----
-
-**💡 ANÁLISIS:**
-${workouts.length === 0 ? 
-`¡Aún no has empezado! El mejor momento para plantar un árbol fue hace 20 años. El segundo mejor momento es AHORA. Ve a Rutinas y empieza tu primer entrenamiento.` :
-workouts.length < 5 ?
-`Estás empezando. Los primeros entrenamientos son los más importantes porque crean el HÁBITO. No te preocupes por pesos, enfócate en no faltar. En 2-3 semanas ya verás fuerza nueva.` :
-workouts.length < 15 ?
-`Buen progreso. Ya pasaste la fase más difícil (empezar). Ahora enfócate en progresión: intenta subir peso o reps CADA semana. Tu cuerpo está respondiendo.` :
-`¡Excelente consistencia! Con ${workouts.length} entrenamientos ya tienes una base sólida. ${weekVolume > 10000 ? 'Tu volumen es alto, asegúrate de recuperar bien.' : 'Busca subir el volumen total gradualmente para seguir creciendo.'}`}
-
-**🎯 OBJETIVOS PARA LA PRÓXIMA SEMANA:**
-1. ${last7.length < (profile.daysPerWeek || 4) ? 'Completa todas tus ' + (profile.daysPerWeek || 4) + ' sesiones' : 'Mantén tu adherencia perfecta'}
-2. Intenta superar al menos 1 PR
-3. Registra tu peso 3 veces (mañana, en ayunas)
-4. ${profile.goal && profile.goal.includes('perder') ? 'Mantén el déficit calórico sin saltarte comidas' : 'Come suficiente, especialmente proteína post-entreno'}
-
-¿Quieres ver algo más específico o que te ajuste el plan?`;
-    },
-
-    generateInjuryAdvice(lowerPrompt, profile) {
-        let area = 'general';
-        if (lowerPrompt.includes('hombro')) area = 'hombro';
-        else if (lowerPrompt.includes('rodilla')) area = 'rodilla';
-        else if (lowerPrompt.includes('espalda') || lowerPrompt.includes('lumbar')) area = 'espalda';
-        else if (lowerPrompt.includes('muñeca') || lowerPrompt.includes('muneca')) area = 'muñeca';
-        else if (lowerPrompt.includes('codo')) area = 'codo';
-
-        const adviceMap = {
-            hombro: {
-                title: 'Hombro',
-                common: 'Impingement/pinzamiento, tendinitis del manguito rotador, inestabilidad',
-                avoid: 'Press militar detrás del cuello, aperturas muy abiertas, dips muy profundos',
-                replace: 'Usa mancuernas en vez de barra (más libertad de movimiento), landmine press, press con agarre neutro',
-                rehab: 'Face pulls diarios (3x15), rotaciones externas con banda, dislocaciones con palo, movilidad CARS',
-                rule: 'Si duele DURANTE el ejercicio → para inmediatamente. Si duele DESPUÉS → reduce peso 50% por 2 semanas.'
-            },
-            rodilla: {
-                title: 'Rodilla',
-                common: 'Tendinitis rotuliana, síndrome patelofemoral, menisco',
-                avoid: 'Sentadillas con rebote, extensión de piernas con mucho peso, saltar con peso',
-                replace: 'Sentadilla a caja (box squat), leg press con ROM controlado, step-ups, isométricos de cuádriceps',
-                rehab: 'Sentadilla isométrica en pared 3x30s, VMO con mini-banda, foam roller en cuádriceps e IT band',
-                rule: 'El dolor de rodilla suele mejorar con movimiento CONTROLADO, no con descanso total. Reduce peso pero sigue moviendo.'
-            },
-            espalda: {
-                title: 'Espalda baja/Lumbar',
-                common: 'Hernia discal, protrusión, espasmo muscular, ciática',
-                avoid: 'Peso muerto con espalda redondeada, good mornings pesados, crunches (comprimen discos)',
-                replace: 'Hip hinge con kettlebell, RDL con ROM reducido, bird dog, pallof press, dead bug',
-                rehab: 'McGill Big 3 (curl-up, side plank, bird dog), cat-cow, glute bridges, paseos suaves',
-                rule: 'La espalda baja ODIA la flexión bajo carga. Mantén core activado SIEMPRE. Bracing > cinturón.'
-            },
-            muñeca: {
-                title: 'Muñeca',
-                common: 'Tendinitis, TFCC, síndrome de De Quervain',
-                avoid: 'Front squats con agarre completo, curls con barra recta (usa Z), push-ups con muñecas planas',
-                replace: 'Usa wrist wraps, barra EZ para curls, push-ups en puños o parallettes, agarre neutro cuando sea posible',
-                rehab: 'Extensiones de muñeca con banda ligera, flexiones/extensiones con peso leve, rice bucket',
-                rule: 'Usa wrist wraps en ejercicios pesados. Calienta muñecas 2-3min antes de entrenar.'
-            },
-            codo: {
-                title: 'Codo',
-                common: 'Epicondilitis (codo de tenista), epitrocleitis (codo de golfista)',
-                avoid: 'Curls muy pesados con mala forma, extensiones de tríceps agresivas, demasiado volumen de brazos',
-                replace: 'Reduce frecuencia de bíceps/tríceps, usa bandas, excéntricos lentos con peso bajo',
-                rehab: 'Wrist curls excéntricos, tyler twist con theraband, masaje profundo en antebrazo',
-                rule: 'Los problemas de codo suelen venir de DEMASIADO volumen de brazos. Reduce series totales de bíceps + tríceps.'
-            },
-            general: {
-                title: 'General',
-                common: 'Dolor muscular (DOMS), pinzamientos, tendinitis',
-                avoid: 'Cualquier ejercicio que cause dolor AGUDO (no confundir con molestia muscular)',
-                replace: 'Busca variaciones que no duelan. Casi siempre hay una alternativa sin dolor.',
-                rehab: 'Movilidad diaria 10min, foam roller, calentamiento progresivo, sueño de calidad',
-                rule: 'DOLOR ≠ DOMS. El DOMS es difuso y dura 24-72h. El dolor de lesión es localizado, agudo y empeora con el movimiento.'
-            }
-        };
-
-        const advice = adviceMap[area];
-        return `🏥 **Guía: Dolor/Molestia en ${advice.title}**
-
-⚠️ **DISCLAIMER:** Esto NO reemplaza a un fisioterapeuta. Si el dolor es intenso, persistente (>2 semanas) o limita tu día a día, ve a un profesional.
-
----
-
-**🔍 Problemas comunes:** ${advice.common}
-
-**❌ EVITA:**
-${advice.avoid}
-
-**✅ REEMPLAZA CON:**
-${advice.replace}
-
-**🔄 REHABILITACIÓN/PREVENCIÓN:**
-${advice.rehab}
-
-**📏 REGLA DE ORO:**
-${advice.rule}
-
----
-
-**📋 PROTOCOLO DE VUELTA AL ENTRENO:**
-1. **Semana 1-2:** Solo movimientos sin dolor, peso 40-50%, enfócate en rehab
-2. **Semana 3-4:** Aumenta gradualmente a 70%, añade ejercicios uno a uno
-3. **Semana 5+:** Vuelta a la normalidad si no hay dolor
-
-**💡 Tips generales:**
-• Calentar SIEMPRE 10min antes de entrenar (cardio + movilidad articular)
-• El dolor "bueno" es muscular y difuso. El dolor "malo" es articular y agudo.
-• Si algo duele → baja peso → cambia ángulo → cambia ejercicio → descansa ese músculo
-• Hielo 15min post-entreno si hay inflamación
-• Anti-inflamatorios solo si es necesario y por corto tiempo
-
-¿Quieres que te diseñe una rutina adaptada a tu molestia?`;
-    },
-
-
-    generateDetailedSupplements(profile, lowerPrompt) {
-        const weight = profile.weight || 70;
-
-        if (lowerPrompt.includes('creatina')) {
-            return `💎 **TODO sobre Creatina Monohidrato**
-
-La creatina es EL suplemento más estudiado y más efectivo que existe para rendimiento y músculo.
-
-**📊 ¿Qué hace?**
-• Aumenta la fosfocreatina muscular → más ATP → más fuerza y reps
-• Mejora la recuperación entre series
-• Aumenta el volumen celular (cell swelling → señal anabólica)
-• Beneficios cognitivos comprobados
-
-**📏 DOSIS:** 5g/día. TODOS los días. Así de simple.
-
-**❓ Preguntas frecuentes:**
-• **¿Fase de carga?** NO necesaria. 5g/día durante 3-4 semanas y ya estás saturado.
-• **¿Cuándo tomarla?** Da igual. Con la comida, en el batido, cuando quieras. La consistencia importa más.
-• **¿Retiene líquidos?** Sí, 1-3kg de agua INTRAMUSCULAR (te ves más lleno, no hinchado). Es bueno.
-• **¿Es segura?** SÍ. Es el suplemento más estudiado de la historia. Sin efectos adversos a largo plazo.
-• **¿Hay que ciclarla?** NO. Úsala indefinidamente.
-• **¿Cuál comprar?** Creatina monohidrato en polvo. No necesitas "creapure" ni versiones fancy. La más barata funciona igual.
-• **¿Se pierde pelo?** NO hay evidencia sólida. Un estudio sugirió aumento de DHT pero nunca se replicó.
-• **¿Afecta los riñones?** NO si tienes riñones sanos. Bebe suficiente agua.
-
-**💰 Costo-beneficio:** ~$15-20/mes por +5-10% de rendimiento. El suplemento con mejor ROI que existe.
-
-**Dosis para ti:** 5g/día (${weight}kg). No necesitas más.`;
-        }
-
-        if (lowerPrompt.includes('pre-entreno') || lowerPrompt.includes('pre entreno')) {
-            return `⚡ **Pre-Entrenos: Guía Completa**
-
-**¿Necesitas un pre-entreno?** Probablemente NO. Un café + plátano funciona igual de bien.
-
-**📊 Ingredientes que SÍ funcionan (y dosis efectiva):**
-1. **Cafeína:** 3-6mg/kg → Para ti: ${Math.round(weight * 4)}mg (equivale a ~${Math.round(weight * 4 / 80)} cafés)
-   • Mejora fuerza, resistencia y focus
-   • No tomes después de las 14:00 (afecta sueño)
-   • Desarrollas tolerancia → haz breaks de 1-2 semanas
-
-2. **Citrulina malato:** 6-8g → Mejora pump y resistencia muscular
-3. **Beta-alanina:** 3-5g → El "hormigueo". Mejora resistencia en series largas
-4. **Creatina:** 5g → Ya sabes
-5. **Tirosina:** 500-2000mg → Focus mental
-
-**❌ Ingredientes INÚTILES que meten en pre-entrenos:**
-• Blend propietario (esconden las dosis)
-• BCAAs (ya tienes en la proteína)
-• Dosis sub-clínicas de todo
-
-**🏆 Opciones:**
-1. **Hacerlo tú mismo:** Cafeína + Citrulina + Creatina en polvo. Más barato y sabes lo que tomas.
-2. **Comprado:** Busca uno con dosis transparentes de al menos cafeína 200-300mg + citrulina 6g
-3. **El clásico:** 1-2 cafés + plátano 30min antes. Simple y efectivo.
-
-**⚠️ Reglas:**
-• No dependas del pre-entreno. Si no puedes entrenar sin él, estás durmiendo mal o comiendo mal.
-• Cicla la cafeína: 8 semanas on, 1-2 off
-• NUNCA más de 400mg cafeína/día`;
-        }
-
-        return `💊 **Guía Completa de Suplementación para ${profile.name || 'Atleta'} (${weight}kg)**
-
-Basada en evidencia científica. Ordenada por importancia REAL:
-
----
-
-**TIER 1 - IMPRESCINDIBLES (evidencia nivel A):**
-
-1. **💎 Creatina Monohidrato** — 5g/día SIEMPRE
-   • +5-10% fuerza | +1-2kg músculo en 12 semanas | ~$15/mes
-   • El suplemento más efectivo que existe, punto.
-
-2. **🥤 Proteína Whey** — ${Math.round(weight * 0.5)}g/día (si no llegas con comida)
-   • NO es mágica, es simplemente proteína conveniente
-   • Tu objetivo: ${Math.round(weight * 2)}g proteína total/día. Si llegas con comida, no la necesitas.
-   • Post-entreno o cuando quieras completar macros.
-
-3. **☀️ Vitamina D3** — 2000-4000 IU/día
-   • 70%+ de la población es deficiente
-   • Impacta testosterona, inmunidad, mood, rendimiento
-   • Tómala con comida (grasa) para mejor absorción
-
----
-
-**TIER 2 - MUY ÚTILES (evidencia nivel B):**
-
-4. **😴 Magnesio (Glicinato)** — 400mg antes de dormir
-   • Mejora calidad de sueño (y sin sueño no creces)
-   • Reduce calambres y mejora recuperación
-
-5. **🐟 Omega-3 (EPA/DHA)** — 2-3g/día
-   • Antiinflamatorio, salud cardiovascular, articular
-   • Busca mínimo 1g EPA + 1g DHA combinados
-
-6. **☕ Cafeína** — ${Math.round(weight * 4)}mg pre-entreno
-   • +5-10% rendimiento comprobado
-   • Tómala 30-60min antes del gym
-
----
-
-**TIER 3 - OPCIONALES (ayudan un poquito):**
-
-7. Beta-Alanina — 3-5g/día (para sets de >10 reps)
-8. Citrulina — 6-8g pre-entreno (pump y resistencia)
-9. Zinc — 15-30mg si sudas mucho o tienes déficit
-10. Ashwagandha — 600mg/día (reduce cortisol, mejora recuperación)
-
----
-
-**❌ NO MALGASTES EN:**
-• BCAAs/EAAs → Ya los tienes en whey y comida
-• Quemadores de grasa → Marketing. El déficit calórico es gratis
-• Boosters de testosterona → No funcionan (tribulus, etc.)
-• Glutamina → Inútil si comes suficiente proteína
-• Multivitamínico → Come verduras, es mejor y más barato
-
----
-
-**💰 Budget mensual realista:** ~$50-70 (creatina + whey + vitamina D + magnesio)
-**💡 Prioridad:** Sueño > Nutrición > Entreno > Suplementos
-
-Los suplementos son el ÚLTIMO 5% de tus resultados. El 95% es entreno consistente, nutrición adecuada y sueño.
-
-¿Tienes dudas sobre alguno en específico?`;
-    },
-
-    generateCardioAdvice(profile, lowerPrompt) {
-        const weight = profile.weight || 70;
-        const goal = profile.goal || 'ganar músculo';
-        const isDeficit = goal.includes('perder') || goal.includes('definir');
-
-        return `🫀 **Guía de Cardio para ${isDeficit ? 'Definición' : 'Ganancia Muscular'}**
-
-**📊 Tu situación:** ${weight}kg | Objetivo: ${goal}
-${isDeficit ? '→ El cardio es tu ALIADO para aumentar el déficit sin bajar más calorías' : '→ El cardio debe ser MÍNIMO para no interferir con la hipertrofia'}
-
----
-
-**🚶 LISS (Low Intensity Steady State) - RECOMENDADO:**
-• ${isDeficit ? '4-5 sesiones/semana' : '2-3 sesiones/semana'} de 20-40 min
-• Caminar rápido, bicicleta suave, elíptica
-• FC: 120-140 bpm (puedes hablar sin dificultad)
-• Quema: ~${Math.round(weight * 0.06 * 30)} kcal/sesión de 30min
-• ✅ NO interfiere con la recuperación muscular
-• Hazlo en días de descanso o post-entreno de pesas
-
-**⚡ HIIT (High Intensity Interval Training):**
-• ${isDeficit ? '1-2 sesiones/semana MÁXIMO' : '0-1 sesiones/semana'}
-• 15-20 min: 30s sprint / 60s descanso
-• Sprints, burpees, remo, bici, battle ropes
-• Quema más en menos tiempo PERO es muy demandante
-• ⚠️ No hacer el mismo día que piernas pesadas
-
-**📊 RECOMENDACIÓN SEMANAL:**
-${isDeficit ? `
-• Lunes: Pesas + 15min LISS post
-• Martes: Pesas + 15min LISS post
-• Miércoles: 30min LISS (caminar rápido)
-• Jueves: Pesas + 15min LISS post
-• Viernes: Pesas + 15min LISS post
-• Sábado: 20min HIIT O 40min caminata
-• Domingo: Descanso activo (paseo)
-• **Total: ~150-200min cardio/semana → quema extra de ~800-1200 kcal**
-` : `
-• Solo 2-3 caminatas de 20-30min en días off
-• 8000-10000 pasos diarios
-• NO hagas HIIT si ya entrenas pesas 4-5x/semana
-• El cardio excesivo = menos recuperación = menos músculo
-• **Total: ~60-90min/semana es suficiente**
-`}
-
-**💡 EL HACK DEFINITIVO:**
-En vez de 30min de cardio, simplemente **camina más durante el día:**
-• 10.000 pasos/día = ~400 kcal extra quemadas
-• Sube escaleras, camina al trabajo, pasea después de comer
-• Es más sostenible y no te cansa para el gym
-
-**❌ ERRORES:**
-• Cardio excesivo en volumen → pierdes músculo y rendimiento
-• Cardio ANTES de pesas → peor rendimiento con los hierros
-• Compensar mala dieta con cardio → nunca funciona
-• HIIT diario → sobreentrenamiento seguro
-
-¿Necesitas un plan más específico?`;
-    },
-
-    generateDetailedRecovery(profile, periodWeek) {
-        const weight = profile.weight || 70;
-        const isDeload = periodWeek.deload;
-
-        return `😴 **GUÍA DE RECUPERACIÓN ÓPTIMA**
-
-La recuperación es donde tu cuerpo CRECE. Entrenas para estimular, comes para construir, duermes para crecer. Sin recovery = sin gains.
-
----
-
-${isDeload ? `
-🟢 **ESTÁS EN SEMANA DE DELOAD**
-Esta semana es ESPECIALMENTE importante para recovery:
-• Reduce peso al 55-60% de tu máximo
-• Haz solo 2 series por ejercicio
-• No llegues al fallo en ninguna serie
-• Duerme más de lo normal
-• Come en mantenimiento (no en déficit)
-• Tu cuerpo se está reparando y adaptando
-\n---\n` : ''}
-
-**🌙 SUEÑO (Factor #1 - representa el 30% de tus resultados):**
-• **Duración:** 7-9 horas. Sin negociar. Punto.
-• **Consistencia:** Misma hora TODOS los días (±30min)
-• **Ambiente:** Cuarto oscuro total, 18-20°C, sin ruido
-• **Pre-sueño:** Sin pantallas 45-60min antes (o usa filtro azul)
-• **Suplementos:** Magnesio 400mg + Ashwagandha 600mg antes de dormir
-
-📊 **Por qué importa:** Con <6h de sueño pierdes 60% de la capacidad de síntesis proteica. Literalmente es imposible crecer bien sin dormir bien.
-
-**🍽️ NUTRICIÓN PARA RECOVERY:**
-• Proteína: ${Math.round(weight * 2)}g distribuidos en 4-5 tomas (cada 3-4h)
-• Post-entreno: 30-40g proteína rápida (whey) + carbohidratos
-• Antes de dormir: 30-40g caseína o yogur griego (proteína lenta, 7h sin comer)
-• Hidratación: ${Math.round(weight * 0.04)}L/día (más en días de entreno)
-• Carbohidratos: reponor glucógeno POST-entreno es clave
-
-**🧘 RECUPERACIÓN ACTIVA:**
-• Caminar 20-30min (mejora flujo sanguíneo sin estrés muscular)
-• Foam rolling 5-10min en músculos entrenados
-• Estiramientos LIGEROS (no agresivos post-entreno)
-• Yoga/mobility 1-2x semana
-• Sauna/baño caliente (relaja y mejora circulación)
-
-**❄️ ESTRATEGIAS AVANZADAS:**
-• Ducha fría 2-3min post-entreno (reduce inflamación aguda)
-• Contrast showers (alternar frío/caliente)
-• Massage gun en puntos de tensión
-• Meditación/respiración 5-10min (reduce cortisol)
-
----
-
-**⚠️ SEÑALES DE QUE NECESITAS MÁS RECOVERY:**
-• Rendimiento baja 2+ sesiones seguidas
-• Te sientes débil/cansado al despertar
-• Apetito baja o sube mucho
-• Irritabilidad constante
-• Tardes en dormirte
-• Dolor articular (no muscular)
-• Enfermarte frecuentemente
-
-**🆘 Si estás sobreentrenado:**
-1. Toma 3-5 días de descanso TOTAL
-2. Come en mantenimiento o superávit
-3. Duerme 9+ horas
-4. Cero estrés extra
-5. Vuelve gradualmente al 60% de tu intensidad normal
-
-**💡 REGLA SIMPLE:** Si dudas entre entrenar o descansar → DESCANSA. Un día más de recuperación nunca arruina nada. Un día de sobreentrenamiento puede costarte una semana.`;
-    },
-
-    generateMotivation(profile) {
-        const workouts = Storage.getWorkoutHistory().length;
-        const week = Storage.getCurrentWeek();
-        const name = profile.name || 'crack';
-
-        const motivations = [
-            `🔥 **${name}, escucha esto:**
-
-El gym no se trata de motivación. La motivación es una mentira que te venden en Instagram.
-
-Se trata de DISCIPLINA. De IDENTIDAD. De ser la persona que va al gym sin importar cómo se siente.
-
-¿Sabes cuántas veces los atletas de élite no quieren entrenar? TODOS los días. La diferencia es que van igual.
-
-**La regla de los 5 minutos:** Solo comprométete a ir y calentar 5 minutos. Si después quieres irte, te vas. (Spoiler: en toda la historia de esta regla, NADIE se ha ido después de calentar)
-
-📊 Dato real: Tienes ${workouts} entrenamientos completados. Cada uno de ellos es una prueba de que PUEDES. No empieces de cero, empieza desde donde estás.
-
-**Tu yo de dentro de 3 meses** te agradecerá CADA sesión que hagas hoy. Incluso la más corta. Incluso la más mediocre. Porque la consistencia > la perfección.
-
-💪 Ahora ve, ponte los tenis, y haz la primera serie. El resto fluye solo.`,
-
-            `⚡ **${name}, la verdad incómoda:**
-
-Nadie que valga la pena tuvo un físico así por "cuando le daban ganas".
-
-Las 5am en invierno. Los días de pierna cuando duele todo. Las comidas "aburridas" que prepares. ESO es lo que construye el físico que quieres.
-
-📈 **Los números no mienten:**
-• Ya llevas ${workouts} entrenos y ${week} semanas
-• El 92% de la gente abandona antes de la semana 8
-• TÚ sigues aquí. Eso ya te pone en el top 8%
-
-**Hack mental:** No pienses "tengo que entrenar". Piensa "ELIJO entrenar". Tú eliges ser esta versión de ti mismo.
-
-🎯 **Tu plan para hoy:**
-1. Pon tu playlist más agresiva
-2. Haz el calentamiento
-3. Primera serie del primer ejercicio
-4. El momentum hace el resto
-
-La disciplina es un músculo. Y tú lo estás entrenando cada vez que vas sin ganas.
-
-💪 Ahora deja el teléfono y ve a levantar hierro.`,
-
-            `💪 **${name}, piensa en esto:**
-
-Dentro de 90 días, VAS a existir de todas formas. La pregunta es: ¿vas a ser la misma versión de hoy? ¿O la versión que entrena, come bien y se transforma?
-
-El dolor de la disciplina pesa gramos. El dolor del arrepentimiento pesa TONELADAS.
-
-📊 **Perspectiva:**
-• 12 semanas = 84 días
-• 1 hora de gym = 4% de tu día
-• 4-5x/semana = menos de 5 horas (de 168 que tiene la semana)
-
-Tienes el tiempo. Lo que te falta no es motivación, es DECISIÓN. Decide ser esa persona y actúa como ella actuaría.
-
-**La persona que quieres ser... ¿se quedaría hoy en el sofá?** No.
-
-🔥 Ve al gym. Aunque sea 30 minutos. Aunque sea suave. Porque el HÁBITO importa más que la intensidad.
-
-Pd: Nadie se arrepiente después de entrenar. NUNCA.`
-        ];
-
-        return motivations[Math.floor(Math.random() * motivations.length)];
-    },
-
-
-    generateComparison(lowerPrompt, profile) {
-        // Detectar qué se compara
-        if (lowerPrompt.includes('mancuerna') && (lowerPrompt.includes('barra') || lowerPrompt.includes('vs'))) {
-            return `⚖️ **Barra vs Mancuernas**
-
-| Aspecto | Barra | Mancuernas |
-|---------|-------|------------|
-| Carga máxima | ✅ Mayor peso posible | ❌ Limitadas |
-| Rango de movimiento | ❌ Fijo | ✅ Mayor libertad |
-| Estabilización | ❌ Menos | ✅ Más (más fibras) |
-| Simetría | ❌ Lado dominante compensa | ✅ Trabaja independiente |
-| Seguridad (solo) | ❌ Necesitas rack/spotter | ✅ Puedes soltar |
-| Progresión | ✅ Más fácil (2.5kg) | ❌ Saltos de 2-4kg |
-
-**Veredicto:** Usa AMBOS. Barra para los básicos pesados (bench, squat, deadlift). Mancuernas para accesorios y variación.
-
-**Para hipertrofia:** Las mancuernas pueden ser MEJORES porque permiten mayor estiramiento y rango. El press con mancuernas activa más pecho que el press con barra según EMG.
-
-**Mi recomendación para ti:**
-• Compuestos pesados → Barra (progresión más fácil)
-• Accesorios → Mancuernas (más estímulo, menos riesgo)
-• Varía cada 4-6 semanas para nuevo estímulo`;
-        }
-
-        if (lowerPrompt.includes('maquina') && (lowerPrompt.includes('peso libre') || lowerPrompt.includes('libre'))) {
-            return `⚖️ **Peso Libre vs Máquinas**
-
-| Aspecto | Peso Libre | Máquinas |
-|---------|-----------|----------|
-| Activación muscular | ✅ Mayor (estabilizadores) | ❌ Menor |
-| Seguridad | ❌ Requiere técnica | ✅ Guiado |
-| Aislamiento | ❌ Difícil aislar | ✅ Excelente |
-| Progresión | ✅ Infinita | ✅ Fácil |
-| Funcionalidad | ✅ Transferencia real | ❌ Movimiento fijo |
-| Lesión/dolor | ❌ Más riesgo si no hay técnica | ✅ Más seguro |
-
-**Veredicto para tu programa:**
-• 60-70% peso libre (la BASE de tu entrenamiento)
-• 30-40% máquinas (para aislar y rematar sin fatiga del SNC)
-
-**Pro tip:** Empieza con compuestos libres cuando estás fresco, termina con máquinas cuando estás cansado. Lo mejor de ambos mundos.`;
-        }
-
-        if (lowerPrompt.includes('volumen') || lowerPrompt.includes('definicion') || lowerPrompt.includes('bulk') || lowerPrompt.includes('cut')) {
-            const weight = profile.weight || 70;
-            return `⚖️ **¿Volumen o Definición? (Bulk vs Cut)**
-
-📊 **Tu situación actual:** ${weight}kg | IMC: ${(weight / ((profile.height || 175)/100)**2).toFixed(1)}
-
-**¿Cuándo hacer VOLUMEN (bulk)?**
-• Si estás <15% grasa corporal (se ven abdominales)
-• Si eres principiante (los noob gains compensan la grasa)
-• Si ya llevas +6 semanas en déficit
-• Superávit: +200-350 kcal → ${Math.round(weight * 34)}-${Math.round(weight * 36)} kcal/día
-
-**¿Cuándo hacer DEFINICIÓN (cut)?**
-• Si estás >18-20% grasa (no se ven abdominales)
-• Si llevas +4 meses en volumen
-• Si te ves "hinchado" y quieres verte mejor
-• Déficit: -300-500 kcal → ${Math.round(weight * 24)}-${Math.round(weight * 27)} kcal/día
-
-**¿Cuándo RECOMPOSICIÓN?**
-• Si eres principiante (ganas músculo y pierdes grasa a la vez)
-• Si vuelves después de un parón
-• Come en mantenimiento con proteína alta: ${Math.round(weight * 2.2)}g/día
-
-**Mi recomendación para ti:**
-${(weight / ((profile.height || 175)/100)**2) > 25 ? '→ Empieza con un CUT moderado de 8-12 semanas, luego pasa a lean bulk.' : 
-(weight / ((profile.height || 175)/100)**2) < 20 ? '→ Estás en buen punto para un LEAN BULK de 16-20 semanas. Come +300kcal y entrena duro.' :
-'→ Puedes hacer RECOMPOSICIÓN comiendo en mantenimiento con alta proteína y entrenando con intensidad.'}`;
-        }
-
-        // Respuesta genérica de comparación
-        return `🤔 **Buena pregunta.**
-
-Cuéntame más específicamente qué estás comparando y te doy una respuesta detallada:
-• "¿Es mejor barra o mancuernas para pecho?"
-• "¿Hago volumen o definición?"
-• "¿Máquinas o peso libre?"
-• "¿3 o 4 días de entrenamiento?"
-• "¿Full body o PPL?"
-• "¿Cardio antes o después de pesas?"
-• "¿Creatina o pre-entreno?"
-
-¿Qué comparación necesitas?`;
-    },
-
-    generateAestheticAdvice(lowerPrompt, profile) {
-        const weight = profile.weight || 70;
-        let target = '';
-
-        if (lowerPrompt.includes('abdomen') || lowerPrompt.includes('six pack') || lowerPrompt.includes('marcar')) target = 'abs';
-        else if (lowerPrompt.includes('brazo') || lowerPrompt.includes('biceps')) target = 'brazos';
-        else if (lowerPrompt.includes('espalda') || lowerPrompt.includes('anch')) target = 'espalda';
-        else if (lowerPrompt.includes('hombro')) target = 'hombros';
-        else if (lowerPrompt.includes('pecho')) target = 'pecho';
-        else if (lowerPrompt.includes('pierna')) target = 'piernas';
-        else if (lowerPrompt.includes('gluteo')) target = 'gluteos';
-
-        const guides = {
-            abs: `🎯 **Cómo Marcar Abdominales / Six Pack**
-
-**La verdad incómoda:** Los abs se REVELAN con la dieta, se CONSTRUYEN con el entreno.
-• Para ver abs necesitas ~12-15% grasa (hombres) o 18-22% (mujeres)
-• Tu peso actual: ${weight}kg → necesitas estar a ~${Math.round(weight * 0.87)}kg aprox para ver abs
-
-**📊 PLAN:**
-1. **Nutrición (80% del resultado):**
-   • Déficit de 400-500 kcal: come ${Math.round(weight * 25)} kcal/día
-   • Proteína alta: ${Math.round(weight * 2.2)}g para preservar músculo
-   • Corta carbos procesados, mantén los complejos
-
-2. **Entrenamiento de abs (20% del resultado):**
-   • 2-3 sesiones/semana es suficiente
-   • Ejercicios con CARGA PROGRESIVA (no 100 crunches):
-     - Hanging leg raises: 3x10-15 (el MEJOR)
-     - Cable crunches: 3x12-15 (resistencia progresiva)
-     - Ab wheel rollouts: 3x8-12 (brutal para el recto abdominal)
-     - Pallof press: 3x12 cada lado (oblicuos sin ensanchar cintura)
-   • NO hagas oblicuos con peso lateral (ensanchan cintura)
-
-3. **Cardio:** 10.000 pasos/día + 2-3 sesiones LISS
-
-**⏰ Timeline realista:**
-${weight > 80 ? '• Desde tu peso actual: 12-16 semanas para abs visibles' : weight > 70 ? '• Desde tu peso: 8-12 semanas para abs visibles' : '• Estás cerca: 4-8 semanas con disciplina'}`,
-            brazos: `🎯 **Cómo Tener Brazos Grandes (40cm+)**
-
-**📐 Los números:**
-• Brazo "grande": >38cm (flexionado, frío)
-• Brazo "impresionante": >40cm
-• El tríceps es 2/3 del brazo → no solo hagas bíceps
-
-**📊 PLAN SEMANAL (10-14 series directas/semana por músculo):**
-
-**Bíceps (cabeza larga + corta):**
-1. Curl inclinado 45° — 3x10-12 (MEJOR para cabeza larga, máximo estiramiento)
-2. Curl con barra EZ — 3x8-10 (más peso = más estímulo)
-3. Curl martillo — 3x10-12 (braquial = grosor del brazo)
-4. Curl concentrado/predicador — 2x12-15 (peak de bíceps)
-
-**Tríceps (cabeza larga + lateral + medial):**
-1. Extensión overhead (cable/mancuerna) — 3x10-12 (cabeza larga = la más grande)
-2. Press cerrado — 3x8-10 (compound, más peso)
-3. Pushdown con cuerda — 3x12-15 (lateral head = definición)
-4. Kickbacks — 2x15-20 (contracción máxima)
-
-**💡 Claves científicas:**
-• El bíceps crece mejor con ejercicios en ESTIRAMIENTO (curl inclinado)
-• El tríceps crece mejor con overhead (estira la cabeza larga)
-• Entrena brazos 2-3x/semana para máximo crecimiento
-• Progresa en PESO. Si siempre usas 10kg, tus brazos no cambian.`,
-            espalda: `🎯 **Cómo Tener Espalda Ancha (V-Taper)**
-
-El V-taper viene de: dorsales anchos + hombros anchos + cintura pequeña.
-
-**📊 PLAN PARA ESPALDA ANCHA:**
-
-**Ancho (dorsales):** — Tracción vertical
-1. Dominadas pronadas anchas — 4x6-10 (EL MEJOR ejercicio para ancho)
-2. Jalón al pecho agarre ancho — 3x10-12
-3. Pullover con cable — 3x12-15 (aislamiento de dorsal)
-
-**Grosor (trapecios, romboides):** — Tracción horizontal
-4. Remo con barra — 4x8-10 (espalda GRUESA)
-5. Remo sentado agarre neutro — 3x10-12
-6. Face pulls — 3x15-20 (postura + deltoides post)
-
-**Clave:** La conexión mente-músculo es CRÍTICA en espalda. "Tira con los codos, no con las manos." Imagina que tus manos son ganchos.
-
-**Volumen semanal:** 16-22 series directas (la espalda aguanta mucho volumen)
-**Frecuencia:** 2x/semana mínimo`,
-            hombros: `🎯 **Cómo Tener Hombros 3D (Boulder Shoulders)**
-
-Los hombros tienen 3 cabezas. La mayoría solo entrena 1. Por eso se ven planos.
-
-**📊 PLAN:**
-
-**Deltoides lateral (EL MÁS IMPORTANTE para amplitud):**
-1. Elevaciones laterales — 4x12-15 (3-4 veces por semana, sí, así de frecuente)
-2. Elevaciones laterales en cable — 3x12-15 (tensión constante)
-3. Machine lateral raise — 3x15-20 (si tienes acceso)
-→ **Total lateral: 15-25 series/semana** (aguantan MUCHA frecuencia)
-
-**Deltoides anterior:** YA trabaja con presses. Solo necesita:
-4. Press militar/mancuernas — 4x8-10 (1-2x/semana es suficiente)
-
-**Deltoides posterior (para hombros 3D desde atrás):**
-5. Face pulls — 3x15-20 (CADA sesión, como calentamiento)
-6. Pájaros / reverse fly — 3x15-20
-
-**💡 Secretos:**
-• Las laterales se hacen LIGERAS. Ego = 0. Siente el deltoides.
-• Inclina ligeramente hacia adelante y levanta hasta 75-80° (no 90°)
-• El deltoides lateral tiene muchas fibras lentas → reps altas (12-20)
-• No subas el trapecio al hacer laterales (baja los hombros)`,
-            pecho: `🎯 **Cómo Tener un Pecho Grande y Definido**
-
-**📊 PLAN ÓPTIMO:**
-
-**Pecho superior (el que más impacta visualmente):**
-1. Press inclinado 30° con mancuernas — 4x8-12 (PRIORIDAD #1)
-2. Press inclinado con barra — 3x8-10
-
-**Pecho medio:**
-3. Press banca plano — 4x6-10 (fuerza + masa)
-4. Aperturas con mancuernas/cable — 3x12-15 (estiramiento)
-
-**Pecho inferior:**
-5. Dips (inclinado hacia adelante) — 3x8-12
-6. Cable crossover (de arriba a abajo) — 3x12-15
-
-**💡 Ciencia:**
-• El pecho crece mejor con ESTIRAMIENTO bajo carga (aperturas en banco plano/inclinado)
-• Inclinado 30° (no 45°, eso ya es hombro)
-• 12-18 series/semana totales es el sweet spot
-• La conexión mente-músculo importa MUCHO en pecho`,
-            piernas: `🎯 **Cómo Tener Piernas Grandes y Definidas**
-
-**📊 PLAN:**
-
-**Cuádriceps (frente del muslo):**
-1. Sentadilla profunda (bajo paralelo) — 4x6-10 (rey de piernas)
-2. Sentadilla búlgara — 3x10-12 (unilateral, glúteo + quad)
-3. Leg extension — 3x12-15 (aislamiento, pump brutal)
-4. Hack squat / leg press — 3x10-12 (más volumen sin fatiga espinal)
-
-**Isquiotibiales (parte posterior):**
-5. Peso muerto rumano — 4x8-12 (estiramiento máximo)
-6. Leg curl acostado — 3x10-12 (aislamiento)
-7. Nordic hamstring curl — 3x5-8 (avanzado, previene lesiones)
-
-**Gemelos:**
-8. Elevaciones de gemelos sentado — 4x12-15
-9. Elevaciones de pie — 4x8-12
-
-**💡 Secreto:** Profundidad > peso. Una sentadilla profunda con 80kg construye más que una a medias con 120kg.`,
-            gluteos: `🎯 **Cómo Desarrollar Glúteos**
-
-**Los 3 mejores ejercicios según EMG:**
-1. **Hip Thrust** — 4x8-12 (mayor activación de glúteo máximo, LEJOS)
-2. **Sentadilla Búlgara profunda** — 3x10-12 (estiramiento + activación)
-3. **RDL (Peso Muerto Rumano)** — 3x8-12 (glúteo en estiramiento)
-
-**Complementarios:**
-4. Cable kickback — 3x12-15 (aislamiento)
-5. Abducción sentado — 3x15-20 (glúteo medio)
-6. Step-ups altos — 3x10 cada pierna
-
-**Frecuencia:** 2-3x/semana | **Volumen:** 12-18 series/semana directas
-**Clave:** El glúteo responde a PESO PESADO en hip thrust y rango completo en sentadillas.`
-        };
-
-        return guides[target] || `🎯 **Mejora Estética Integral**
-
-Para verte lo MEJOR posible, estos son los músculos que más impacto visual tienen:
-1. **Hombros anchos** → Te ves más grande vestido y da forma de V
-2. **Espalda ancha** → V-taper, presencia física
-3. **Pecho desarrollado** → Se nota con camiseta
-4. **Brazos** → Lo que la gente mira primero
-5. **Core definido** → La cherry on top
-
-Dime qué parte específica quieres mejorar y te doy el plan detallado.`;
-    },
-
-    generateTrainingScience(lowerPrompt, profile, periodWeek) {
-        const level = profile.level || 'intermedio';
-
-        if (lowerPrompt.includes('cuantas series') || lowerPrompt.includes('volumen')) {
-            return `📊 **Guía de Volumen Óptimo por Grupo Muscular (series/semana)**
-
-Basado en meta-análisis de Schoenfeld et al. y recomendaciones de Mike Israetel:
-
-| Músculo | Mínimo (mantener) | Óptimo (crecer) | Máximo (avanzado) |
-|---------|-------------------|-----------------|-------------------|
-| Pecho | 6 | 12-18 | 22 |
-| Espalda | 8 | 14-22 | 25 |
-| Hombros (lateral) | 6 | 15-22 | 30 |
-| Cuádriceps | 6 | 12-18 | 22 |
-| Isquiotibiales | 4 | 10-14 | 18 |
-| Bíceps | 4 | 10-14 | 20 |
-| Tríceps | 4 | 8-14 | 18 |
-| Glúteos | 4 | 10-16 | 20 |
-
-**Para tu nivel (${level}):** Empieza por el rango bajo-medio y sube 1-2 series cada semana hasta que notes que no te recuperas. Ahí tienes tu volumen máximo individual.
-
-**📏 Regla:** Si un músculo está DÉBIL → dale más volumen (near máximo). Si está FUERTE → mantenerlo con el mínimo y redistribuye volumen.`;
-        }
-
-        if (lowerPrompt.includes('rpe') || lowerPrompt.includes('rir') || lowerPrompt.includes('fallo') || lowerPrompt.includes('intensidad')) {
-            return `📊 **RPE / RIR y Proximidad al Fallo**
-
-**¿Qué es RPE?** Rating of Perceived Exertion (escala de esfuerzo)
-**¿Qué es RIR?** Reps In Reserve (repeticiones que te quedan)
-
-| RPE | RIR | Descripción |
-|-----|-----|-------------|
-| 10 | 0 | FALLO MUSCULAR. No puedes hacer ni 1 rep más |
-| 9.5 | 0-1 | Quizás podrías hacer 1 más con ayuda |
-| 9 | 1 | Te queda 1 rep segura |
-| 8 | 2 | Te quedan 2 reps seguras |
-| 7 | 3 | Te quedan 3 reps. Moderadamente difícil |
-| 6 | 4+ | Relativamente fácil |
-
-**📊 Tu fase actual: RPE ${periodWeek.rpe}**
-
-**¿Debo ir al fallo?**
-${level === 'principiante' ? 
-'• Como principiante: NUNCA al fallo. Entrena a RPE 7-8 (2-3 RIR). Tu técnica se rompe antes del fallo muscular real.' :
-level === 'intermedio' ?
-'• Como intermedio: Última serie de cada ejercicio a RPE 9 (1 RIR). El resto a RPE 7-8.' :
-'• Como avanzado: Puedes ir al fallo en la última serie de aislamientos. Nunca al fallo en compuestos pesados (squat, deadlift).'}
-
-**💡 La ciencia dice:**
-• Entrenar a 1-3 RIR produce ~90% del estímulo que ir al fallo
-• Ir al fallo = MUCHA más fatiga por poco estímulo extra
-• El fallo repetido = sobreentrenamiento
-• Reserva el fallo para últimas series de aislamientos`;
-        }
-
-        return `📊 **Principios de Entrenamiento Basados en Ciencia**
-
-**Los 4 pilares de la hipertrofia:**
-1. **Tensión mecánica** → Usar peso suficiente (60-85% 1RM)
-2. **Volumen** → Suficientes series por músculo/semana
-3. **Progresión** → Hacer MÁS que la sesión anterior
-4. **Recovery** → Descanso y nutrición para crecer
-
-**📏 Para tu nivel (${level}):**
-• Series por ejercicio: ${level === 'principiante' ? '3' : level === 'intermedio' ? '3-4' : '3-5'}
-• Reps para hipertrofia: 6-12 (compound), 10-20 (isolation)
-• RPE: ${periodWeek.rpe}
-• Frecuencia por músculo: ${level === 'principiante' ? '3x/semana (full body)' : '2x/semana (upper/lower o PPL)'}
-• Descanso: 2-3min compound, 60-90s isolation
-• Progresión: +2.5kg o +1 rep cada semana
-
-¿Quieres que profundice en algún aspecto?`;
-    },
-
-
-    generatePlateauAdvice(profile, periodWeek) {
-        const week = Storage.getCurrentWeek();
-        const workouts = Storage.getWorkoutHistory();
-
-        return `🚧 **Cómo Romper un Estancamiento**
-
-Es NORMAL estancarse. Le pasa a todos. No significa que algo está mal, significa que necesitas un ajuste.
-
----
-
-**🔍 DIAGNÓSTICO - ¿Por qué no progresas?**
-
-Revisa estos puntos en orden (el 90% de los estancamientos se resuelve con los 3 primeros):
-
-1. **¿Duermes 7-9 horas?** → Sin sueño NO creces. Punto.
-2. **¿Comes suficiente?** → Mínimo ${Math.round((profile.weight || 70) * 2)}g proteína + ${profile.goal && profile.goal.includes('ganar') ? 'superávit calórico' : 'calorías suficientes'}
-3. **¿Has descansado últimamente?** → Si llevas +6 semanas sin deload, TÓMATE UNA.
-4. **¿Llevas tracking de pesos?** → Si no anotas, no progresas. No sabes si subiste o no.
-5. **¿Tu técnica es buena?** → A veces basta con mejorar la ejecución para sentir más el músculo.
-
----
-
-**💊 SOLUCIONES (pruébalas en este orden):**
-
-**Opción 1: Deload (1 semana)**
-→ Entrena al 50-60% de tu peso normal. La fatiga acumulada puede estar frenándote.
-
-**Opción 2: Cambio de estímulo**
-→ Cambia ejercicios que llevas +6 semanas haciendo igual
-→ Ej: Bench con barra → Press con mancuernas
-→ Ej: Sentadilla → Búlgara o Hack Squat
-
-**Opción 3: Manipula variables**
-→ Si siempre haces 3x10, prueba 5x5 (más peso, menos reps)
-→ O prueba 3x15-20 (menos peso, más reps, diferente estímulo)
-→ Cambia el tempo: 3-1-1-0 (excéntrica más lenta)
-
-**Opción 4: Sube el volumen**
-→ Añade 1-2 series más por ejercicio estancado
-→ Añade 1 ejercicio extra para ese músculo
-
-**Opción 5: Técnicas de intensidad**
-→ Drop sets en la última serie
-→ Rest-pause (fallo → 15s → fallo → 15s → fallo)
-→ Myo-reps (fallo → 5s → 3 reps × 3-5 mini-sets)
-
----
-
-**🎯 MI RECOMENDACIÓN PARA TI (Semana ${week}):**
-${week >= 5 && !periodWeek.deload ? 
-'Llevas ' + week + ' semanas. Tómate una semana de deload AHORA y volverás más fuerte.' :
-'Cambia los ejercicios de los músculos estancados y sube 2 series. Dale 3 semanas y evalúa.'}
-
-**💡 Recuerda:** El estancamiento es temporal. SIEMPRE se rompe con paciencia y ajustes inteligentes. La gente que se rinde aquí nunca sabe que estaba a 2 semanas de su próximo PR.`;
-    },
-
-    generateGreeting(profile, periodWeek) {
-        const hour = new Date().getHours();
-        const greeting = hour < 12 ? 'Buenos días' : hour < 18 ? 'Buenas tardes' : 'Buenas noches';
-        const week = Storage.getCurrentWeek();
-        const workouts = Storage.getWorkoutHistory();
-        const todayWorkout = workouts.find(w => new Date(w.date).toDateString() === new Date().toDateString());
-
-        return `${greeting}, ${profile.name || 'crack'}! 👋
-
-📅 **Estás en la semana ${week}/12 — Fase: ${periodWeek.phase}**
-⚡ Intensidad: ${periodWeek.intensity}% | RPE: ${periodWeek.rpe}
-${periodWeek.deload ? '🟢 Es semana de DELOAD. Tómalo con calma.' : ''}
-${todayWorkout ? '✅ Ya entrenaste hoy. ¡Bien hecho!' : '💪 Aún no entrenas hoy. ¿Vamos al gym?'}
-
-**¿En qué te ayudo?** Puedo:
-• 💪 Darte el entrenamiento de hoy listo para ejecutar
-• 🥗 Decirte qué comer ahora mismo
-• 📊 Analizar tu progreso y ajustar el plan
-• 🎯 Resolver cualquier duda de entreno o nutrición
-• 📸 Valorar una foto de tu físico
-• ⏰ Planificar según tu deadline/fecha objetivo
-
-Solo dime qué necesitas. Estoy para que logres tu mejor versión. 🔥`;
-    },
-
-    generateThankYouResponse(profile) {
-        const responses = [
-            `¡Para eso estoy, ${profile.name || 'crack'}! 💪 Si te surge cualquier duda, aquí me tienes. Ahora a darle con todo. 🔥`,
-            `¡De nada! 🙌 Recuerda: consistencia > perfección. Cada día que te presentas estás ganando. ¿Algo más que pueda hacer por ti?`,
-            `¡Me alegra ayudar! 💪 Tú pon el esfuerzo y yo la guía. Juntos vamos a lograr esa transformación. ¿Necesitas algo más?`
-        ];
-        return responses[Math.floor(Math.random() * responses.length)];
-    },
-
-    generateContextualResponse(prompt, lowerPrompt, profile, periodWeek) {
-        // ===== RESPUESTA INTELIGENTE A CUALQUIER PREGUNTA =====
-        const week = Storage.getCurrentWeek();
-        const weight = profile.weight || 70;
-        const name = profile.name || 'crack';
-
-        // Preguntas sobre tiempo/frecuencia
-        if (lowerPrompt.includes('cuanto tiempo') || lowerPrompt.includes('cuantas veces') || lowerPrompt.includes('cuantos dias')) {
-            return `⏱️ **Sobre tiempo y frecuencia, ${name}:**\n\n• **Entreno:** ${profile.daysPerWeek || 4} días/semana es lo ideal para ti\n• **Duración por sesión:** 45-75 minutos (más no es mejor)\n• **Descanso entre sesiones:** Mínimo 48h para el mismo músculo\n• **Para ver resultados:** 4-6 semanas de consistencia mínimo\n• **Para transformación real:** 12-16 semanas (tu programa es de 12)\n\n¿Quieres más detalles sobre algo específico?`;
-        }
-
-        // Preguntas tipo "es verdad que" o mitos
-        if (lowerPrompt.includes('es verdad') || lowerPrompt.includes('es cierto') || lowerPrompt.includes('mito') || lowerPrompt.includes('sirve')) {
-            return `🔬 **Sobre tu pregunta, ${name}:**\n\nDéjame darte la respuesta basada en ciencia:\n\n**Mitos comunes del fitness (la verdad):**\n• "Sudar = quemar grasa" → FALSO. El sudor es termorregulación, no quema de grasa.\n• "Las mujeres se ponen enormes con pesas" → FALSO. No tienen testosterona suficiente.\n• "Hay que comer cada 3 horas" → FALSO. Lo que importa es el total diario.\n• "El cardio quema músculo" → PARCIAL. Solo si es excesivo sin proteína.\n• "No comer de noche engorda" → FALSO. Importa el total calórico del día.\n• "Los abdominales se hacen en la cocina" → VERDAD. Necesitas bajo % grasa para verlos.\n• "La creatina es mala/peligrosa" → FALSO. Es el suplemento más seguro y estudiado.\n\n¿Tu pregunta específica es sobre alguno de estos o algo diferente?`;
-        }
-
-        // Preguntas sobre agua/hidratación
-        if (lowerPrompt.includes('agua') || lowerPrompt.includes('hidrat') || lowerPrompt.includes('beber') || lowerPrompt.includes('liquido')) {
-            return `💧 **Hidratación para ${name} (${weight}kg):**\n\n• **Mínimo diario:** ${Math.round(weight * 0.035)}L (${Math.round(weight * 35)}ml)\n• **Días de entreno:** +500ml-1L extra\n• **Si sudas mucho:** +1L adicional\n\n**Señales de deshidratación:**\n• Orina amarilla oscura\n• Fatiga durante entreno\n• Dolor de cabeza\n• Calambres\n\n**Tips:**\n• Bebe antes de sentir sed\n• Lleva botella al gym siempre\n• Bebe 500ml al despertar\n• Electrolitos si entrenas >90min\n\n💡 La hidratación afecta DIRECTAMENTE tu rendimiento. Un 2% de deshidratación = -10% de fuerza.`;
-        }
-
-        // Preguntas sobre peso/báscula
-        if (lowerPrompt.includes('peso') || lowerPrompt.includes('bascula') || lowerPrompt.includes('balanza') || lowerPrompt.includes('pesarme') || lowerPrompt.includes('subi') || lowerPrompt.includes('baje')) {
-            return `⚖️ **Sobre el peso, ${name}:**\n\n**Tu peso actual:** ${weight}kg\n\n**Importante entender:**\n• El peso fluctúa 1-3kg/día (agua, comida, sodio, estrés)\n• NO te peses todos los días y saques conclusiones\n• Pésate 3x/semana EN AYUNAS y saca el PROMEDIO semanal\n• Solo el promedio semanal importa, no el día a día\n\n**¿Subiste de peso?**\n• Si comes en superávit: es normal (+0.25-0.5kg/semana MAX es muscle)\n• Si subiste 1-2kg de un día a otro: es AGUA, no grasa\n• Después de día libre/cheat: sube 1-3kg de agua (se va en 2-3 días)\n\n**¿Bajaste de peso?**\n• -0.5 a 1kg/semana en déficit = perfecto\n• Si bajas más rápido: puedes perder músculo\n• Si no bajas: reduce 200kcal más o añade cardio\n\n**Tu objetivo semanal:**\n${profile.goal && profile.goal.includes('perder') ? '• Perder 0.5-1kg/semana (no más para preservar músculo)' : '• Ganar 0.25-0.5kg/semana (más = mucha grasa)'}\n\n¿Algo más específico sobre tu peso?`;
-        }
-
-        // Preguntas sobre ropa/verse bien
-        if (lowerPrompt.includes('ropa') || lowerPrompt.includes('verse bien') || lowerPrompt.includes('verme bien') || lowerPrompt.includes('estetica') || lowerPrompt.includes('fisico') || lowerPrompt.includes('bonito') || lowerPrompt.includes('atractivo')) {
-            return `👔 **Cómo verte mejor físicamente, ${name}:**\n\n**Los músculos que más impacto visual tienen (orden):**\n1. 🟠 **Hombros anchos** → Lo #1 que te hace ver grande vestido\n2. 🔵 **Espalda ancha** → V-taper, presencia física\n3. 🔴 **Pecho desarrollado** → Se nota con camiseta\n4. 💗 **Brazos** → Lo que la gente mira primero\n5. 🟡 **Cintura estrecha** → Contraste con hombros = wow\n\n**El "secreto" para verse bien:**\n• Hombros anchos + cintura estrecha = el mejor físico posible\n• Prioriza: Laterales (hombros), Pull-ups (espalda), Press (pecho)\n• La grasa abdominal es el ENEMIGO #1 de la estética\n\n**Timeline:**\n• 4 semanas: ropa queda diferente\n• 8 semanas: TÚ notas el cambio\n• 12 semanas: los demás preguntan "¿qué hiciste?"\n\n¿Quieres un plan enfocado en estética?`;
-        }
-
-        // Preguntas sobre ansiedad/estrés/bienestar mental
-        if (lowerPrompt.includes('ansiedad') || lowerPrompt.includes('estres') || lowerPrompt.includes('depres') || lowerPrompt.includes('triste') || lowerPrompt.includes('mental') || lowerPrompt.includes('animo')) {
-            return `🧠 **Fitness y Salud Mental, ${name}:**\n\nEl ejercicio es uno de los MEJORES antidepresivos naturales. La ciencia es clara:\n\n**Beneficios comprobados del ejercicio en salud mental:**\n• Libera endorfinas (la "droga de la felicidad")\n• Reduce cortisol (hormona del estrés) un 30-40%\n• Mejora calidad de sueño (fundamental para el ánimo)\n• Aumenta autoestima y confianza\n• Da estructura y propósito al día\n\n**Mi recomendación:**\n1. Entrena aunque no tengas ganas (5 min → el resto fluye)\n2. Prioriza pesas sobre cardio (más impacto en autoestima)\n3. Duerme 7-9h (sin sueño todo empeora)\n4. Camina 20-30min al aire libre (luz solar = serotonina)\n5. Come bien (la nutrición afecta MUCHO el estado mental)\n\n💡 El gym no solo transforma tu cuerpo, transforma tu MENTE.\n\n⚠️ Si sientes que necesitas ayuda profesional, no dudes en buscar un psicólogo. El gym complementa, pero no reemplaza la terapia profesional.\n\n¿Quieres que te arme un plan de entreno enfocado en bienestar?`;
-        }
-
-        // Preguntas sobre principiantes
-        if (lowerPrompt.includes('empezar') || lowerPrompt.includes('comenzar') || lowerPrompt.includes('principiante') || lowerPrompt.includes('nuevo') || lowerPrompt.includes('primera vez') || lowerPrompt.includes('no se nada')) {
-            return `🌱 **Guía para Empezar, ${name}:**\n\n¡Bienvenido! Los principiantes tienen la MEJOR ventaja: los "noob gains". Tu cuerpo va a cambiar más rápido que nunca en los primeros meses.\n\n**Plan de las primeras 4 semanas:**\n\n1. **Frecuencia:** 3 días/semana (Lunes, Miércoles, Viernes)\n2. **Rutina:** Full Body (trabaja todo cada sesión)\n3. **Ejercicios básicos que aprender:**\n   • Sentadilla (piernas)\n   • Press de banca (pecho)\n   • Remo con barra (espalda)\n   • Press militar (hombros)\n   • Curl de bíceps\n   • Pushdown de tríceps\n\n4. **Nutrición simple:**\n   • Come ${Math.round(weight * 30)}kcal/día\n   • ${Math.round(weight * 1.8)}g de proteína/día\n   • Come verduras en cada comida\n\n5. **Reglas de oro:**\n   • NUNCA faltes 2 días seguidos\n   • Técnica > Peso (siempre)\n   • Progresa +2.5kg/semana en los básicos\n   • Duerme 7-9 horas\n\n💪 Dime "créame una rutina" y te genero una perfecta para principiantes.`;
-        }
-
-        // Preguntas sobre horarios/cuándo entrenar
-        if (lowerPrompt.includes('hora') || lowerPrompt.includes('manana') || lowerPrompt.includes('noche') || lowerPrompt.includes('cuando entrenar') || lowerPrompt.includes('mejor momento')) {
-            return `⏰ **¿Cuándo es mejor entrenar, ${name}?**\n\n**La verdad:** La MEJOR hora es la que puedas ser CONSISTENTE.\n\n**Pero si puedes elegir:**\n• **Mañana (6-10am):** Testosterona más alta, menos gente en gym\n• **Mediodía (11-14):** Cuerpo ya caliente, buenos niveles de energía\n• **Tarde (15-19):** Fuerza máxima (pico de rendimiento), reflejos mejores\n• **Noche (20-22):** Puede afectar sueño si es muy intenso\n\n**Mi recomendación para ti:**\n• Si tu objetivo es fuerza → tarde (4-7pm)\n• Si tu objetivo es perder grasa → mañana en ayunas (más quema)\n• Si solo puedes de noche → entrena de noche (es mejor que no entrenar)\n\n💡 **Lo que SÍ importa:**\n• Entrenar siempre a la misma hora (el cuerpo se adapta)\n• Comer 1-2h antes del entreno\n• No entrenar justo después de una comida pesada\n\n¿Necesitas que ajuste tu rutina a tu horario?`;
-        }
-
-        // Preguntas sobre alcohol
-        if (lowerPrompt.includes('alcohol') || lowerPrompt.includes('cerveza') || lowerPrompt.includes('trago') || lowerPrompt.includes('fiesta') || lowerPrompt.includes('beber')) {
-            return `🍺 **Alcohol y Fitness, ${name}:**\n\n**La realidad cruda:**\n• El alcohol REDUCE la síntesis proteica un 20-30%\n• Baja testosterona por 24-72h\n• Deshidrata (peor rendimiento)\n• Son calorías VACÍAS (7kcal/gramo)\n• Empeora calidad de sueño\n\n**¿Puedo tomar y aún tener resultados?**\nSí, pero con reglas:\n\n1. Máximo 1-2 tragos, 1-2 veces por semana\n2. NUNCA el día de entreno ni el día anterior a piernas/espalda\n3. Come proteína antes y después de beber\n4. Hidrátate mucho (1 vaso de agua por cada trago)\n5. Si te excedes: el día siguiente come normal (no ayunes)\n\n**Las "menos malas" opciones:**\n• Vodka + soda (bajo en calorías)\n• Vino tinto (antioxidantes)\n• Cerveza light\n\n**Las peores:**\n• Cócteles dulces (300-500kcal cada uno)\n• Cerveza regular (150-200kcal)\n\n💡 Si estás en un cut serio: 0 alcohol por 8-12 semanas acelera MUCHO los resultados.`;
-        }
-
-        // Si llegamos aquí, intentar dar una respuesta útil basada en el prompt
-        return `💬 **${name}, sobre tu pregunta:**\n\n"${prompt}"\n\nAunque no tengo una respuesta específica preprogramada para esto, te puedo ayudar con todo lo relacionado a:\n\n💪 **Entrenamiento** - Rutinas, ejercicios, técnica, progresión\n🥗 **Nutrición** - Macros, comidas, dietas, suplementos\n📊 **Progreso** - Valoración, análisis, comparación\n🎯 **Objetivos** - Planes con timeline, metas realistas\n😴 **Recuperación** - Sueño, descanso, manejo de lesiones\n🔬 **Ciencia** - Mitos vs realidad, estudios\n🧠 **Motivación** - Mentalidad, disciplina, hábitos\n\n**Prueba preguntarme cosas como:**\n• "¿Qué hago si no veo resultados?"\n• "¿Cuánta proteína necesito exactamente?"\n• "¿Cómo elimino la grasa del abdomen?"\n• "¿Es mejor cardio o pesas para bajar de peso?"\n• "Dame mi rutina de hoy"\n• "Créame una rutina nueva"\n\n¿En qué te puedo ayudar? 🔥`;
-    },
-
-    // ===== API DE IMAGEN =====
-    localImageAnalysis(question) {
-        const profile = Storage.getProfile();
-        const measurements = Storage.getMeasurements();
-        const week = Storage.getCurrentWeek();
-        const weight = profile.weight || 70;
-        const height = profile.height || 175;
-        const bmi = (weight / ((height/100)**2)).toFixed(1);
-        
-        return `📸 **Foto Recibida - Valoración Basada en tu Perfil**
-
-📊 **Datos actuales:**
-• Peso: ${weight}kg | Altura: ${height}cm | IMC: ${bmi}
-• Nivel: ${profile.level} | Semana: ${week}/12
-• Objetivo: ${profile.goal}
-
-🔍 **Mi Análisis (basado en tus datos y progreso):**
-
-${bmi < 20 ? '• Estás en un peso bajo. Prioriza ganancia de masa muscular con superávit calórico.' : 
-bmi < 25 ? '• Tu IMC está en rango normal. Excelente base para recomposición o lean bulk.' :
-bmi < 30 ? '• Tienes algo de sobrepeso. Un déficit moderado de 400kcal + entrenamiento te transformará.' :
-'• Necesitas enfocarte en pérdida de grasa con déficit calórico constante.'}
-
-💪 **Recomendaciones según tu foto:**
-1. ${profile.goal && profile.goal.includes('perder') ? 'Mantén el déficit calórico y entrena con intensidad para preservar músculo' : 'Come en superávit controlado (+300kcal) y progresa en los compuestos'}
-2. Enfócate en ${profile.level === 'principiante' ? 'aprender la técnica de los básicos y crear el hábito' : 'progresión de cargas y volumen adecuado por músculo'}
-3. Toma fotos cada 2 semanas en las mismas condiciones para comparar
-4. El cambio visual real empieza a notarse a partir de la semana 4-6
-
-📈 **Para la próxima foto:**
-• Misma iluminación, misma hora (mañana en ayunas)
-• Poses: frontal relajado, frontal flex, lateral, espalda
-• Así podrás comparar progreso real
-
-${measurements.length > 0 ? `\n📏 Tu último registro de peso: ${measurements[measurements.length-1].weight || weight}kg` : ''}
-
-💡 **Tip:** Registra tus medidas en la sección Progreso para trackear cambios que la balanza no muestra (cintura, brazos, pecho).
-
-¿Quieres que te dé un plan específico basado en tu objetivo?`;
-    },
-
-    // ===== GENERAR RUTINA PERSONALIZADA =====
-    generateCustomRoutine(profile) {
+    genFullProgram(profile, periodWeek, input) {
         const days = profile.daysPerWeek || 4;
         let templateKey;
-
-        if (days <= 3) templateKey = 'fullBody';
+        if (input.includes('ppl') || input.includes('push pull')) templateKey = 'ppl';
+        else if (input.includes('upper') || input.includes('torso')) templateKey = 'upperLower';
+        else if (input.includes('full body') || input.includes('cuerpo completo')) templateKey = 'fullBody';
+        else if (days <= 3) templateKey = 'fullBody';
         else if (days === 4) templateKey = 'upperLower';
         else if (days === 5) templateKey = 'bro';
         else templateKey = 'ppl';
 
+        const template = ROUTINE_TEMPLATES[templateKey];
+        let r = `**Programa: ${template.name}**\n${profile.name || 'Atleta'} | ${profile.level || 'intermedio'} | ${days} dias/semana\nSemana ${Storage.getCurrentWeek()}/12 | Fase: ${periodWeek.phase}\n\n---\n`;
+
+        template.days.forEach((day, i) => {
+            const exercises = day.exercises.map(exId => {
+                const ex = EXERCISES_DB.find(e => e.id === exId);
+                return ex ? `  • ${ex.name} - ${ex.sets}x${ex.reps}` : '';
+            }).filter(Boolean).join('\n');
+            r += `\n**Dia ${i+1}: ${day.name}**\n${exercises}\n`;
+        });
+
+        r += `\n---\n\n**Progresion (Fase: ${periodWeek.phase}):**\n• Intensidad: ${periodWeek.intensity}% | RPE: ${periodWeek.rpe}\n`;
+        r += periodWeek.deload ? '• Semana de DELOAD: reduce peso al 60%, enfocate en tecnica\n' : '• Intenta +2.5kg en compuestos si completaste todas las reps\n';
+        r += `\n**Reglas:**\n1. Nunca faltes 2 dias seguidos\n2. Si no progresas en peso: +1 rep, luego +1 serie, luego cambia ejercicio\n3. Proteina: ${Math.round((profile.weight||70)*2)}g/dia\n4. Duerme 7-9h`;
+        return r;
+    },
+
+
+    genNutrition(input, profile) {
+        const m = this.getUserMetrics(profile);
+        const goal = profile.goal || 'ganar musculo';
+        let targetCals, protein, carbs, fats, strategy;
+
+        if (goal.includes('perder') || goal.includes('definir') || goal.includes('bajar')) {
+            targetCals = Math.round(m.tdee - 400);
+            protein = Math.round(m.w * 2.3);
+            fats = Math.round(m.w * 0.85);
+            carbs = Math.round((targetCals - protein*4 - fats*9) / 4);
+            strategy = 'Deficit calorico moderado (-400kcal). Proteina alta para preservar musculo.';
+        } else if (goal.includes('ganar') || goal.includes('volumen') || goal.includes('musculo')) {
+            targetCals = Math.round(m.tdee + 300);
+            protein = Math.round(m.w * 2);
+            fats = Math.round(m.w * 1);
+            carbs = Math.round((targetCals - protein*4 - fats*9) / 4);
+            strategy = 'Lean bulk (+300kcal). Superavit controlado para minimizar grasa.';
+        } else {
+            targetCals = m.tdee;
+            protein = Math.round(m.w * 2);
+            fats = Math.round(m.w * 1);
+            carbs = Math.round((targetCals - protein*4 - fats*9) / 4);
+            strategy = 'Mantenimiento/recomposicion.';
+        }
+
+        let r = `**Plan Nutricional Personalizado**\n${m.w}kg | ${m.h}cm | ${m.a} anos | Objetivo: ${goal}\nEstrategia: ${strategy}\n\n---\n\n`;
+        r += `**Tus numeros (Mifflin-St Jeor):**\n• BMR: ${m.bmr} kcal | TDEE: ${m.tdee} kcal\n• **Objetivo diario: ${targetCals} kcal**\n\n`;
+        r += `**Macronutrientes:**\n• Proteina: **${protein}g** (${Math.round(protein*4/targetCals*100)}%)\n• Carbohidratos: **${carbs}g** (${Math.round(carbs*4/targetCals*100)}%)\n• Grasas: **${fats}g** (${Math.round(fats*9/targetCals*100)}%)\n\n`;
+        r += `**Distribucion en 4-5 comidas:**\n`;
+        r += `• Desayuno (~${Math.round(targetCals*0.25)} kcal): ${protein > 150 ? '40' : '30'}g proteina + carbos complejos\n`;
+        r += `• Almuerzo (~${Math.round(targetCals*0.30)} kcal): ${protein > 150 ? '50' : '40'}g proteina + carbos + verduras\n`;
+        r += `• Pre-entreno (~${Math.round(targetCals*0.15)} kcal): 30g proteina + carbos rapidos\n`;
+        r += `• Cena (~${Math.round(targetCals*0.20)} kcal): 40g proteina + verduras + grasas\n`;
+        r += `• Snack (~${Math.round(targetCals*0.10)} kcal): proteina + frutos secos\n\n`;
+        r += `**Reglas:**\n1. ${protein}g de proteina no son negociables\n2. Pesa tu comida la primera semana\n3. Mas carbos en dias de entreno, menos en descanso\n4. Verduras en cada comida principal\n5. Hidratacion: ${Math.round(m.w*0.035)}L/dia`;
+        return r;
+    },
+
+    genMealIdeas(input, profile) {
+        const m = this.getUserMetrics(profile);
+        const goal = profile.goal || 'ganar musculo';
+        const targetCals = goal.includes('perder') ? Math.round(m.tdee - 400) : goal.includes('ganar') ? Math.round(m.tdee + 300) : m.tdee;
+
+        let meal = 'desayuno';
+        if (input.includes('almuerzo') || input.includes('comida')) meal = 'almuerzo';
+        else if (input.includes('cena')) meal = 'cena';
+        else if (input.includes('pre entreno') || input.includes('antes de entrenar')) meal = 'pre-entreno';
+        else if (input.includes('post entreno') || input.includes('despues de entrenar')) meal = 'post-entreno';
+        else if (input.includes('snack') || input.includes('merienda')) meal = 'snack';
+
+        const meals = {
+            'desayuno': { cals: Math.round(targetCals*0.25), options: [
+                '4 claras + 2 huevos + 80g avena + platano (P:40g C:65g G:12g)',
+                'Yogur griego 250g + granola + frutos rojos + 1 scoop whey (P:35g C:45g G:10g)',
+                'Tostadas integrales + aguacate + pavo + huevo (P:30g C:35g G:16g)',
+                'Pancakes de avena+claras+platano + mantequilla de mani (P:35g C:55g G:15g)',
+                'Smoothie: whey + platano + avena + leche + cacao (P:40g C:50g G:12g)'
+            ]},
+            'almuerzo': { cals: Math.round(targetCals*0.30), options: [
+                '200g pechuga + 100g arroz + brocoli + aceite oliva (P:48g C:80g G:12g)',
+                '180g salmon + quinoa + aguacate + edamame (P:42g C:55g G:22g)',
+                '100g pasta integral + 200g carne magra + salsa tomate (P:50g C:85g G:15g)',
+                '200g pollo + arroz + verduras salteadas + salsa teriyaki (P:45g C:75g G:10g)'
+            ]},
+            'cena': { cals: Math.round(targetCals*0.20), options: [
+                '180g salmon + ensalada grande + aceite oliva + limon (P:38g C:10g G:18g)',
+                '4 huevos + espinacas + champinones + queso feta (P:32g C:8g G:22g)',
+                '200g atun + aguacate + pepino + arroz integral (P:42g C:35g G:15g)',
+                'Wrap integral + 150g pavo + hummus + verduras (P:35g C:30g G:12g)'
+            ]},
+            'pre-entreno': { cals: Math.round(targetCals*0.15), options: [
+                '1 scoop whey + platano + 40g avena + miel (P:30g C:55g G:5g)',
+                '2 rebanadas pan + 100g pavo + platano (P:28g C:50g G:4g)',
+                'Yogur + granola + platano + miel (P:20g C:60g G:8g)'
+            ]},
+            'post-entreno': { cals: Math.round(targetCals*0.20), options: [
+                'Whey + platano + avena + leche + creatina (P:40g C:60g G:8g)',
+                '150g pollo + arroz blanco + fruta (P:38g C:70g G:8g)',
+                '80g cereal + leche + whey + platano (P:35g C:65g G:6g)'
+            ]},
+            'snack': { cals: Math.round(targetCals*0.10), options: [
+                '30g frutos secos + fruta + yogur griego (P:15g C:25g G:12g)',
+                'Batido: whey + platano + mantequilla mani (P:30g C:35g G:10g)',
+                '2 tortitas arroz + mantequilla mani + platano (P:8g C:30g G:10g)'
+            ]}
+        };
+
+        const data = meals[meal] || meals['desayuno'];
+        let r = `**Ideas de ${meal.charAt(0).toUpperCase() + meal.slice(1)} (~${data.cals} kcal)**\n\n`;
+        data.options.forEach((opt, i) => { r += `${i+1}. ${opt}\n\n`; });
+        r += `Ajusta porciones segun tus macros objetivo. Preguntame por otra comida si necesitas mas ideas.`;
+        return r;
+    },
+
+
+    genSupplements(input, profile) {
+        const w = profile.weight || 70;
+
+        if (input.includes('creatina')) {
+            return `**Creatina Monohidrato**\n\nEl suplemento mas estudiado y efectivo para rendimiento y musculo.\n\n**Que hace:**\n• Aumenta fosfocreatina muscular = mas ATP = mas fuerza y reps\n• Mejora recuperacion entre series\n• Beneficios cognitivos comprobados\n\n**Dosis:** 5g/dia, todos los dias. Sin fase de carga necesaria.\n\n**Respuestas rapidas:**\n• Fase de carga: NO necesaria (5g/dia x 3-4 semanas = saturacion)\n• Cuando tomarla: Da igual, consistencia importa mas\n• Retencion: 1-3kg agua intramuscular (te ves mas lleno, no hinchado)\n• Seguridad: El suplemento mas estudiado de la historia, sin efectos adversos\n• Ciclar: NO, usala indefinidamente\n• Cual comprar: Monohidrato en polvo, la mas barata funciona igual\n• Pelo: NO hay evidencia solida de perdida\n\nCosto: ~$15-20/mes por +5-10% rendimiento. Mejor ROI en suplementacion.`;
+        }
+
+        if (input.includes('pre-entreno') || input.includes('pre entreno')) {
+            return `**Pre-Entrenos**\n\nProbablemente NO lo necesitas. Un cafe + platano funciona igual.\n\n**Ingredientes que SI funcionan (dosis efectiva):**\n1. Cafeina: ${Math.round(w*4)}mg (3-6mg/kg) - mejora fuerza y focus\n2. Citrulina malato: 6-8g - pump y resistencia\n3. Beta-alanina: 3-5g - hormigueo, mejora sets largos\n4. Creatina: 5g - ya sabes\n\n**Ingredientes inutiles:**\n• Blends propietarios (esconden dosis)\n• BCAAs (ya estan en la proteina)\n• Dosis sub-clinicas de todo\n\n**Opciones:**\n1. Hacerlo tu: Cafeina + Citrulina + Creatina (~$25/mes)\n2. Comprado: busca dosis transparentes\n3. El clasico: 1-2 cafes + platano 30min antes\n\nRegla: no dependas del pre. Si no puedes entrenar sin el, duermes o comes mal.`;
+        }
+
+        let r = `**Guia de Suplementacion (${w}kg)**\n\nOrdenada por evidencia cientifica e importancia real:\n\n---\n\n`;
+        r += `**TIER 1 - Imprescindibles:**\n\n`;
+        r += `1. **Creatina Monohidrato** - 5g/dia siempre\n   +5-10% fuerza, +1-2kg musculo en 12 semanas | ~$15/mes\n\n`;
+        r += `2. **Proteina Whey** - ${Math.round(w*0.5)}g/dia (si no llegas con comida)\n   Tu objetivo: ${Math.round(w*2)}g proteina total/dia\n\n`;
+        r += `3. **Vitamina D3** - 2000-4000 IU/dia\n   70%+ de la poblacion es deficiente. Afecta rendimiento y hormonas.\n\n`;
+        r += `**TIER 2 - Muy utiles:**\n\n`;
+        r += `4. **Magnesio glicinato** - 400mg antes de dormir (mejora sueno)\n`;
+        r += `5. **Omega-3** - 2-3g/dia (antiinflamatorio, salud cardiovascular)\n`;
+        r += `6. **Cafeina** - ${Math.round(w*4)}mg pre-entreno (+5-10% rendimiento)\n\n`;
+        r += `**NO malgastes en:** BCAAs, quemadores de grasa, boosters de testosterona, glutamina.\n\n`;
+        r += `**Prioridad real:** Sueno > Nutricion > Entreno > Suplementos\nLos suplementos son el ultimo 5% de resultados.`;
+        return r;
+    },
+
+    genInjuryAdvice(input, profile) {
+        let area = 'general';
+        if (input.includes('hombro')) area = 'hombro';
+        else if (input.includes('rodilla')) area = 'rodilla';
+        else if (input.includes('espalda') || input.includes('lumbar')) area = 'espalda';
+        else if (input.includes('codo')) area = 'codo';
+        else if (input.includes('muneca')) area = 'muneca';
+
+        const advice = {
+            hombro: { title: 'Hombro', avoid: 'Press militar detras del cuello, aperturas muy abiertas, dips profundos', replace: 'Mancuernas (mas libertad), landmine press, press agarre neutro', rehab: 'Face pulls 3x15 diarios, rotaciones externas con banda, CARS de hombro', rule: 'Si duele DURANTE = para. Si duele DESPUES = reduce peso 50% por 2 semanas.' },
+            rodilla: { title: 'Rodilla', avoid: 'Sentadillas con rebote, extension de piernas muy pesada, saltos con peso', replace: 'Box squat, leg press ROM controlado, step-ups, isometricos', rehab: 'Sentadilla isometrica en pared 3x30s, VMO con mini-banda, foam roller', rule: 'El dolor de rodilla suele mejorar con movimiento CONTROLADO, no con reposo total.' },
+            espalda: { title: 'Espalda baja', avoid: 'Peso muerto con espalda redondeada, good mornings pesados, crunches', replace: 'Hip hinge con kettlebell, RDL con ROM reducido, bird dog, pallof press', rehab: 'McGill Big 3 (curl-up, side plank, bird dog), cat-cow, glute bridges', rule: 'La espalda baja odia la flexion bajo carga. Bracing siempre.' },
+            codo: { title: 'Codo', avoid: 'Curls muy pesados con mala forma, extensiones agresivas, demasiado volumen', replace: 'Reduce frecuencia de brazos, usa bandas, excentricos lentos', rehab: 'Wrist curls excentricos, masaje profundo en antebrazo', rule: 'Problemas de codo = demasiado volumen de brazos. Reduce series totales.' },
+            muneca: { title: 'Muneca', avoid: 'Front squats agarre completo, curls barra recta, push-ups planas', replace: 'Wrist wraps, barra EZ, push-ups en punos, agarre neutro', rehab: 'Extensiones de muneca con banda ligera, rice bucket', rule: 'Usa wrist wraps en ejercicios pesados. Calienta munecas antes.' },
+            general: { title: 'General', avoid: 'Cualquier ejercicio que cause dolor agudo', replace: 'Busca variaciones sin dolor - casi siempre hay alternativa', rehab: 'Movilidad 10min diarios, foam roller, calentamiento progresivo', rule: 'DOLOR no es DOMS. DOMS = difuso, 24-72h. Lesion = localizado, agudo, empeora.' }
+        };
+
+        const a = advice[area];
+        let r = `**Dolor/Molestia: ${a.title}**\n\n`;
+        r += `*Disclaimer: esto no reemplaza a un fisioterapeuta. Si el dolor es intenso o persiste >2 semanas, consulta un profesional.*\n\n---\n\n`;
+        r += `**Evita:** ${a.avoid}\n\n`;
+        r += `**Reemplaza con:** ${a.replace}\n\n`;
+        r += `**Rehabilitacion:** ${a.rehab}\n\n`;
+        r += `**Regla:** ${a.rule}\n\n`;
+        r += `**Protocolo de vuelta:**\n1. Semana 1-2: solo movimientos sin dolor, 40-50% peso\n2. Semana 3-4: gradualmente a 70%\n3. Semana 5+: normalidad si no hay dolor`;
+        return r;
+    },
+
+
+    genRecovery(profile, periodWeek) {
+        const w = profile.weight || 70;
+        let r = `**Guia de Recuperacion Optima**\n\nLa recuperacion es donde creces. Entrenas para estimular, comes para construir, duermes para crecer.\n\n---\n\n`;
+        if (periodWeek.deload) r += `*Estas en semana de deload. Reduce peso al 55-60%, solo 2 series por ejercicio, sin fallo.*\n\n---\n\n`;
+        r += `**Sueno (30% de tus resultados):**\n• 7-9 horas, sin negociar\n• Misma hora todos los dias\n• Cuarto oscuro, 18-20C, sin pantallas 45min antes\n• Suplementos: Magnesio 400mg + Ashwagandha 600mg\n\n`;
+        r += `**Nutricion para recovery:**\n• Proteina: ${Math.round(w*2)}g en 4-5 tomas\n• Post-entreno: 30-40g whey + carbohidratos\n• Antes de dormir: 30-40g caseina o yogur griego\n• Hidratacion: ${Math.round(w*0.04)}L/dia\n\n`;
+        r += `**Recuperacion activa:**\n• Caminar 20-30min (flujo sanguineo sin estres)\n• Foam rolling 5-10min\n• Estiramientos ligeros\n• Sauna/bano caliente\n\n`;
+        r += `**Senales de sobreentrenamiento:**\n• Rendimiento baja 2+ sesiones seguidas\n• Fatiga al despertar\n• Irritabilidad constante\n• Dolor articular\n• Enfermarse frecuentemente\n\n`;
+        r += `**Si estas sobreentrenado:** 3-5 dias de descanso total, come en mantenimiento, duerme 9+ horas. Vuelve al 60%.`;
+        return r;
+    },
+
+    genCardio(profile, input) {
+        const w = profile.weight || 70;
+        const goal = profile.goal || 'ganar musculo';
+        const isDeficit = goal.includes('perder') || goal.includes('definir');
+
+        let r = `**Cardio para ${isDeficit ? 'Definicion' : 'Ganancia Muscular'}**\n${w}kg | Objetivo: ${goal}\n\n---\n\n`;
+        r += `**LISS (baja intensidad) - Recomendado:**\n• ${isDeficit ? '4-5' : '2-3'} sesiones/semana, 20-40 min\n• Caminar rapido, bicicleta suave, eliptica\n• FC: 120-140 bpm | Quema: ~${Math.round(w*0.06*30)} kcal/30min\n• No interfiere con recuperacion muscular\n\n`;
+        r += `**HIIT (alta intensidad):**\n• ${isDeficit ? '1-2' : '0-1'} sesiones/semana MAXIMO\n• 15-20 min: 30s sprint / 60s descanso\n• Quema mas en menos tiempo pero es muy demandante\n• No hacer el mismo dia que piernas\n\n`;
+        r += `**El hack definitivo:**\n10.000 pasos/dia = ~400 kcal extra sin cansarte para el gym.\nSube escaleras, camina al trabajo, pasea despues de comer.\n\n`;
+        r += `**Errores:**\n• Cardio antes de pesas = peor rendimiento\n• Compensar mala dieta con cardio = nunca funciona\n• HIIT diario = sobreentrenamiento`;
+        return r;
+    },
+
+    genProgress(profile) {
+        const workouts = Storage.getWorkoutHistory();
+        const prs = Storage.getPRs();
+        const week = Storage.getCurrentWeek();
+        const last7 = workouts.filter(w => new Date(w.date) > new Date(Date.now() - 7*24*60*60*1000));
+        const last30 = workouts.filter(w => new Date(w.date) > new Date(Date.now() - 30*24*60*60*1000));
+        const expectedWorkouts = week * (profile.daysPerWeek || 4);
+        const adherence = expectedWorkouts > 0 ? Math.round(workouts.length / expectedWorkouts * 100) : 0;
+
+        const prList = Object.entries(prs).map(([id, data]) => {
+            const ex = EXERCISES_DB.find(e => e.id === id);
+            return { name: ex ? ex.name : id, weight: data.weight, date: data.date };
+        }).sort((a,b) => new Date(b.date) - new Date(a.date));
+
+        let r = `**Reporte de Progreso**\nSemana ${week}/12 | ${profile.name || 'Atleta'}\n\n---\n\n`;
+        r += `**Actividad:**\n• Total: ${workouts.length} entrenamientos\n• Ultimos 7 dias: ${last7.length} sesiones\n• Ultimos 30 dias: ${last30.length} sesiones\n• Adherencia: **${adherence}%** ${adherence >= 80 ? '(excelente)' : adherence >= 60 ? '(buena)' : '(necesita mejorar)'}\n\n`;
+        
+        if (prList.length > 0) {
+            r += `**PRs recientes:**\n`;
+            prList.slice(0, 5).forEach(pr => { r += `• ${pr.name}: **${pr.weight}kg**\n`; });
+            r += '\n';
+        }
+
+        r += `**Proxima semana:**\n1. ${last7.length < (profile.daysPerWeek||4) ? 'Completa todas las sesiones' : 'Mantiene tu adherencia'}\n2. Intenta superar al menos 1 PR\n3. Registra tu peso 3 veces\n4. Cumple tus macros de proteina`;
+        return r;
+    },
+
+    genAssessment(profile, periodWeek) {
+        const m = this.getUserMetrics(profile);
+        const workouts = Storage.getWorkoutHistory();
+        const prs = Storage.getPRs();
+        const week = Storage.getCurrentWeek();
+        const benchPR = prs['bench-press'] ? prs['bench-press'].weight : 0;
+        const squatPR = prs['squat'] ? prs['squat'].weight : 0;
+        const deadliftPR = prs['deadlift'] ? prs['deadlift'].weight : 0;
+        const expectedWorkouts = week * (profile.daysPerWeek || 4);
+        const adherence = expectedWorkouts > 0 ? Math.round(workouts.length / expectedWorkouts * 100) : 0;
+
+        let strengthLevel = 'Principiante';
+        if (benchPR/m.w > 1.5) strengthLevel = 'Avanzado';
+        else if (benchPR/m.w > 1.0) strengthLevel = 'Intermedio';
+        else if (benchPR/m.w > 0.7) strengthLevel = 'Principiante avanzado';
+
+        let r = `**Valoracion Completa**\n\n---\n\n`;
+        r += `**Composicion corporal:**\n• ${m.w}kg | ${m.h}cm | IMC: ${m.bmi} ${parseFloat(m.bmi)<25?'(normal)':parseFloat(m.bmi)<30?'(sobrepeso)':'(alto)'}\n• Grasa estimada: ${parseFloat(m.bmi)<22?'10-14%':parseFloat(m.bmi)<25?'14-18%':parseFloat(m.bmi)<28?'18-24%':'24%+'}\n\n`;
+        
+        if (benchPR || squatPR || deadliftPR) {
+            r += `**Fuerza:**\n`;
+            if (benchPR) r += `• Press banca: ${benchPR}kg (${(benchPR/m.w).toFixed(1)}x peso corporal)\n`;
+            if (squatPR) r += `• Sentadilla: ${squatPR}kg (${(squatPR/m.w).toFixed(1)}x peso corporal)\n`;
+            if (deadliftPR) r += `• Peso muerto: ${deadliftPR}kg (${(deadliftPR/m.w).toFixed(1)}x peso corporal)\n`;
+            r += `• Nivel: **${strengthLevel}**\n\n`;
+        }
+
+        r += `**Adherencia:** ${adherence}% (${workouts.length}/${expectedWorkouts} entrenamientos)\n\n`;
+        r += `**Plan de accion (proximas 4 semanas):**\n`;
+        if (profile.goal && profile.goal.includes('perder')) {
+            r += `1. Calorias: ${Math.round(m.w*26)} kcal/dia con ${Math.round(m.w*2.2)}g proteina\n2. Mantiene intensidad, reduce volumen ligeramente\n3. Cardio: 3-4 sesiones LISS 20-30min\n4. Peso objetivo: ~${(m.w-2).toFixed(1)}kg`;
+        } else {
+            r += `1. Calorias: ${Math.round(m.w*34)} kcal/dia con ${Math.round(m.w*2)}g proteina\n2. Progresion en compuestos +2.5kg/semana\n3. Aumenta 1-2 series/musculo si te recuperas\n4. Peso objetivo: ~${(m.w+1.5).toFixed(1)}kg`;
+        }
+        return r;
+    },
+
+
+    genPlateau(profile, periodWeek) {
+        const week = Storage.getCurrentWeek();
+        let r = `**Como Romper un Estancamiento**\n\nEs normal. Le pasa a todos. No significa que algo esta mal, significa que necesitas un ajuste.\n\n---\n\n`;
+        r += `**Diagnostico - revisa en orden:**\n1. Duermes 7-9 horas? (Sin sueno no creces)\n2. Comes suficiente? (Min ${Math.round((profile.weight||70)*2)}g proteina)\n3. Has descansado? (Si llevas +6 semanas sin deload, toma una)\n4. Llevas tracking? (Si no anotas, no sabes si progresas)\n5. Tu tecnica es buena? (A veces basta mejorar ejecucion)\n\n`;
+        r += `**Soluciones (en orden):**\n\n`;
+        r += `**1. Deload (1 semana):** Entrena al 50-60%. La fatiga acumulada puede frenarte.\n\n`;
+        r += `**2. Cambia estimulo:** Rota ejercicios que llevas +6 semanas (ej: barra a mancuernas)\n\n`;
+        r += `**3. Manipula variables:** Si siempre haces 3x10, prueba 5x5 o 3x15-20\n\n`;
+        r += `**4. Sube volumen:** +1-2 series por ejercicio estancado\n\n`;
+        r += `**5. Tecnicas de intensidad:** Drop sets, rest-pause, myo-reps en la ultima serie\n\n`;
+        r += `---\n\n`;
+        r += week >= 5 && !periodWeek.deload ? 
+            `**Mi recomendacion:** Llevas ${week} semanas. Toma una semana de deload y volveras mas fuerte.` :
+            `**Mi recomendacion:** Cambia ejercicios de los musculos estancados y sube 2 series. Dale 3 semanas.`;
+        return r;
+    },
+
+    genTimeline(input, profile) {
+        const m = this.getUserMetrics(profile);
+        const goal = profile.goal || 'ganar musculo';
+        const level = profile.level || 'intermedio';
+        let weeks = 12;
+        const monthMatch = input.match(/(\d+)\s*mes/);
+        const weekMatch = input.match(/(\d+)\s*semana/);
+        if (monthMatch) weeks = parseInt(monthMatch[1]) * 4;
+        if (weekMatch) weeks = parseInt(weekMatch[1]);
+
+        let muscleGain = level === 'principiante' ? (weeks/4)*0.8 : level === 'intermedio' ? (weeks/4)*0.4 : (weeks/4)*0.2;
+        let fatLoss = (weeks/4) * 1.5;
+
+        let r = `**Plan con Timeline: ${weeks} semanas**\n${m.w}kg | ${level} | Objetivo: ${goal}\n\n---\n\n`;
+        r += `**Resultados realistas en ${weeks} semanas:**\n`;
+        if (goal.includes('perder') || goal.includes('definir')) {
+            r += `• Perdida de grasa: ~${Math.round(fatLoss)}kg\n• Musculo: mantener todo (o ganar algo si eres nuevo)\n• Visual: cambio notable desde semana 4\n\n`;
+        } else {
+            r += `• Ganancia muscular: ~${muscleGain.toFixed(1)}kg puro\n• Fuerza: +${level==='principiante'?'30-50':'10-20'}% en basicos\n• Visual: ropa queda diferente desde semana 4-6\n\n`;
+        }
+        r += `**Fases:**\n`;
+        r += `• Semanas 1-4: Adaptacion, crear habito, progresion lineal\n`;
+        r += `• Semanas 5-8: Acumulacion, subir volumen e intensidad\n`;
+        if (weeks > 8) r += `• Semanas 9-${weeks}: Intensificacion, tecnicas avanzadas, pico\n`;
+        r += `\n**Acciones inmediatas:**\n`;
+        r += `1. Calorias: ${goal.includes('perder')?Math.round(m.w*26):Math.round(m.w*35)} kcal/dia\n`;
+        r += `2. Proteina: ${Math.round(m.w*2.2)}g/dia sin excepcion\n`;
+        r += `3. Entrena ${profile.daysPerWeek||4}x/semana, nunca faltes\n`;
+        r += `4. Fotos cada 2 semanas (misma luz, misma pose)\n5. Duerme 7-9h cada noche`;
+        return r;
+    },
+
+    genComparison(input, profile) {
+        if (input.includes('mancuerna') && (input.includes('barra') || input.includes('vs'))) {
+            return `**Barra vs Mancuernas**\n\n• **Barra:** mayor carga posible, progresion facil (+2.5kg), pero rango fijo\n• **Mancuernas:** mayor rango de movimiento, trabajo independiente, mas estabilizacion\n\n**Veredicto:** Usa ambos. Barra para basicos pesados (bench, squat, deadlift). Mancuernas para accesorios y mayor estiramiento muscular.\n\nPara hipertrofia pura, las mancuernas pueden ser mejores (mas ROM, mas activacion) pero no puedes ir tan pesado.`;
+        }
+        if (input.includes('maquina') && (input.includes('peso libre') || input.includes('libre'))) {
+            return `**Peso Libre vs Maquinas**\n\n• **Peso libre:** mayor activacion (estabilizadores), transferencia funcional, pero requiere tecnica\n• **Maquinas:** seguras, excelente aislamiento, facil progresar\n\n**Veredicto:** 60-70% peso libre (base) + 30-40% maquinas (aislar y rematar).\nEmpieza con compuestos libres cuando estas fresco, termina con maquinas cuando estas cansado.`;
+        }
+        if (input.includes('volumen') || input.includes('definicion') || input.includes('bulk') || input.includes('cut')) {
+            const bmi = parseFloat(this.getUserMetrics(profile).bmi);
+            let rec = bmi > 25 ? 'Empieza con cut de 8-12 semanas.' : bmi < 20 ? 'Lean bulk de 16-20 semanas.' : 'Puedes hacer recomposicion con alta proteina.';
+            return `**Volumen vs Definicion**\n\n**Volumen si:** <15% grasa, principiante, o llevas +6 semanas en deficit\n**Definicion si:** >18-20% grasa, llevas +4 meses en volumen, te ves hinchado\n**Recomposicion si:** principiante, o vuelves despues de un paron\n\n**Para ti (IMC ${this.getUserMetrics(profile).bmi}):** ${rec}`;
+        }
+        return `Dime que comparacion necesitas y te doy una respuesta basada en evidencia. Ejemplos: "barra vs mancuernas", "volumen o definicion", "3 o 4 dias", "cardio antes o despues de pesas".`;
+    },
+
+    genAesthetic(input, profile) {
+        const w = profile.weight || 70;
+        if (input.includes('abdomen') || input.includes('six pack') || input.includes('marcar')) {
+            return `**Como Marcar Abdominales**\n\nLos abs se revelan con dieta, se construyen con entreno.\nPara verlos: ~12-15% grasa (hombres), 18-22% (mujeres).\n\n**Plan:**\n1. **Nutricion (80%):** Deficit de 400-500kcal, come ${Math.round(w*25)} kcal/dia, proteina ${Math.round(w*2.2)}g\n2. **Entrenamiento de abs (20%):** 2-3x/semana con carga progresiva:\n   • Hanging leg raises: 3x10-15\n   • Cable crunches: 3x12-15\n   • Ab wheel: 3x8-12\n   • NO hagas oblicuos con peso lateral (ensancha cintura)\n3. **Cardio:** 10.000 pasos/dia + 2-3 LISS\n\n**Timeline:** ${w>80?'12-16':w>70?'8-12':'4-8'} semanas con disciplina.`;
+        }
+        if (input.includes('brazo') || input.includes('biceps')) {
+            return `**Brazos Grandes**\n\nEl triceps es 2/3 del brazo. No solo hagas biceps.\n\n**Biceps:**\n• Curl inclinado 45: 3x10-12 (maximo estiramiento)\n• Curl barra EZ: 3x8-10 (mas peso)\n• Curl martillo: 3x10-12 (braquial = grosor)\n\n**Triceps:**\n• Extension overhead: 3x10-12 (cabeza larga)\n• Press cerrado: 3x8-10 (compound)\n• Pushdown cuerda: 3x12-15 (lateral)\n\nFrecuencia: 2-3x/semana | Total: 10-14 series directas por musculo`;
+        }
+        if (input.includes('espalda') || input.includes('anch')) {
+            return `**Espalda Ancha (V-Taper)**\n\nV-taper = dorsales anchos + hombros anchos + cintura estrecha.\n\n**Para ancho (vertical):**\n• Dominadas pronadas anchas: 4x6-10\n• Jalon al pecho ancho: 3x10-12\n• Pullover cable: 3x12-15\n\n**Para grosor (horizontal):**\n• Remo barra: 4x8-10\n• Remo sentado neutro: 3x10-12\n• Face pulls: 3x15-20\n\nClave: "Tira con los codos, no con las manos." Volumen: 16-22 series/semana. Frecuencia: 2x/semana min.`;
+        }
+        return `**Mejora Estetica**\n\nMusculos con mayor impacto visual (en orden):\n1. Hombros anchos (laterales, laterales, laterales)\n2. Espalda ancha (dominadas + remos)\n3. Pecho desarrollado (press inclinado + aperturas)\n4. Brazos (triceps overhead + curls inclinados)\n5. Core definido (deficit calorico + entreno con carga)\n\nDime que parte quieres priorizar y te doy el plan detallado.`;
+    },
+
+
+    genTrainingScience(input, profile, periodWeek) {
+        if (input.includes('cuantas series') || input.includes('volumen')) {
+            return `**Volumen Optimo por Musculo (series/semana)**\n\nBasado en meta-analisis de Schoenfeld y recomendaciones de Israetel:\n\n• Pecho: 12-18 (optimo) | 6 (minimo mantener)\n• Espalda: 14-22 | 8\n• Hombros lateral: 15-22 | 6\n• Cuadriceps: 12-18 | 6\n• Isquiotibiales: 10-14 | 4\n• Biceps: 10-14 | 4\n• Triceps: 8-14 | 4\n• Gluteos: 10-16 | 4\n\nPara tu nivel (${profile.level||'intermedio'}): empieza por el rango bajo y sube 1-2 series/semana hasta que no te recuperes.`;
+        }
+        if (input.includes('rpe') || input.includes('rir') || input.includes('fallo')) {
+            return `**RPE / RIR y Proximidad al Fallo**\n\n• RPE 10 / RIR 0: Fallo muscular total\n• RPE 9 / RIR 1: Te queda 1 rep segura\n• RPE 8 / RIR 2: Te quedan 2 reps\n• RPE 7 / RIR 3: Moderadamente dificil\n\n**Tu fase actual: RPE ${periodWeek.rpe}**\n\n**Debo ir al fallo?**\n${profile.level==='principiante' ? 'Como principiante: nunca al fallo. RPE 7-8.' : profile.level==='avanzado' ? 'Como avanzado: ultima serie de aislamientos al fallo. Nunca en compounds pesados.' : 'Como intermedio: ultima serie a RPE 9. El resto a RPE 7-8.'}\n\n**Ciencia:** Entrenar a 1-3 RIR produce ~90% del estimulo del fallo con MUCHA menos fatiga.`;
+        }
+        return `**Principios de Entrenamiento**\n\n**Los 4 pilares de hipertrofia:**\n1. Tension mecanica: 60-85% 1RM\n2. Volumen: suficientes series/semana\n3. Progresion: hacer MAS cada sesion\n4. Recovery: descanso y nutricion\n\n**Para tu nivel (${profile.level||'intermedio'}):**\n• Series/ejercicio: ${profile.level==='principiante'?'3':'3-4'}\n• Reps hipertrofia: 6-12 compound, 10-20 aislamiento\n• RPE: ${periodWeek.rpe}\n• Frecuencia/musculo: 2x/semana\n• Descanso: 2-3min compound, 60-90s aislamiento\n• Progresion: +2.5kg o +1 rep/semana`;
+    },
+
+    genMotivation(profile) {
+        const workouts = Storage.getWorkoutHistory().length;
+        const responses = [
+            `**La disciplina supera a la motivacion.**\n\nLa motivacion es un sentimiento temporal. La disciplina es una decision.\n\nLos atletas de elite no quieren entrenar todos los dias. La diferencia es que van igual.\n\n**La regla de los 5 minutos:** Comprometete solo a ir y calentar 5 min. Si despues quieres irte, te vas. (Nadie se ha ido despues de calentar.)\n\nTienes ${workouts} entrenamientos completados. Cada uno es prueba de que puedes.\n\nTu yo de dentro de 3 meses te agradecera cada sesion de hoy. Ahora ponte los tenis y haz la primera serie.`,
+            `**Perspectiva:**\n\n• 12 semanas = 84 dias\n• 1 hora de gym = 4% de tu dia\n• 4x/semana = menos de 5 horas de 168\n\nTienes el tiempo. Lo que falta no es motivacion, es DECISION.\n\nDentro de 90 dias VAS a existir. La pregunta es: vas a ser la misma version? O la que entrena, come bien y se transforma?\n\nEl dolor de la disciplina pesa gramos. El del arrepentimiento pesa toneladas.\n\nNadie se arrepiente despues de entrenar. NUNCA.`,
+            `**${workouts} entrenamientos completados.**\n\nEl 92% de la gente abandona antes de la semana 8. Tu sigues aqui.\n\nNo pienses "tengo que entrenar". Piensa "ELIJO entrenar".\n\nHoy no necesitas una sesion perfecta. Solo necesitas presentarte. La consistencia siempre gana al esfuerzo esporadico.\n\nVe al gym. Aunque sean 30 minutos. Porque el habito importa mas que la intensidad.`
+        ];
+        return responses[Math.floor(Math.random() * responses.length)];
+    },
+
+    genSomatotype(profile) {
+        const soma = typeof FitnessTools !== 'undefined' ? FitnessTools.getSomatotype(profile) : null;
+        if (!soma) return 'Completa tu perfil (peso, altura, medidas) para determinar tu somatotipo.';
+        let r = `**Tu Somatotipo: ${soma.type}**\n\n${soma.description}\n\n`;
+        r += `**Entrenamiento ideal:**\n${soma.training.map(t => '• ' + t).join('\n')}\n\n`;
+        r += `**Nutricion ideal:**\n${soma.nutrition.map(n => '• ' + n).join('\n')}\n\n`;
+        r += `Nadie es 100% un solo tipo. Tu tipo dominante define la estrategia optima.`;
+        return r;
+    },
+
+    genOneRM(input, profile) {
+        const w = profile.weight || 70;
+        // Check if user gave weight x reps
+        const match = input.match(/(\d+)\s*(?:kg)?\s*(?:x|por|×)\s*(\d+)/);
+        if (match) {
+            const liftW = parseInt(match[1]);
+            const reps = parseInt(match[2]);
+            const oneRM = Math.round(liftW * (36 / (37 - reps))); // Brzycki
+            return `**Calculo de 1RM**\n\n${liftW}kg x ${reps} reps = **~${oneRM}kg de 1RM**\n\n**Tabla de porcentajes:**\n• 90% = ${Math.round(oneRM*0.9)}kg (3 reps - fuerza)\n• 80% = ${Math.round(oneRM*0.8)}kg (8 reps - hipertrofia)\n• 70% = ${Math.round(oneRM*0.7)}kg (12 reps - resistencia)\n• 60% = ${Math.round(oneRM*0.6)}kg (15+ reps - calentamiento)`;
+        }
+        return `**Calculadora de 1RM**\n\nDime peso y repeticiones para calcular tu maximo.\nEjemplo: "80kg x 8 reps"\n\n**Formula rapida (Brzycki):**\n1RM = Peso x (36 / (37 - reps))\n\nEjemplo: 80kg x 8 = ~101kg de 1RM`;
+    },
+
+    genCreateRoutine(profile, periodWeek) {
+        const routine = this.generateCustomRoutine(profile);
+        Storage.saveRoutine(routine);
+        return `**Rutina creada y guardada**\n\n"${routine.name}" basada en:\n• Nivel: ${profile.level||'intermedio'}\n• Dias: ${profile.daysPerWeek||4}/semana\n• Objetivo: ${profile.goal||'ganar musculo'}\n• Fase: ${periodWeek.phase}\n\n**Incluye ${routine.days.length} dias:**\n${routine.days.map((d,i) => '• Dia '+(i+1)+': '+d.name).join('\n')}\n\nVe a la seccion Entreno para verla y empezar.`;
+    },
+
+
+    genGreeting(profile, periodWeek) {
+        const hour = new Date().getHours();
+        const greeting = hour < 12 ? 'Buenos dias' : hour < 18 ? 'Buenas tardes' : 'Buenas noches';
+        const week = Storage.getCurrentWeek();
+        const todayWorkout = Storage.getWorkoutHistory().find(w => new Date(w.date).toDateString() === new Date().toDateString());
+
+        let r = `${greeting}, ${profile.name || 'crack'}.\n\n`;
+        r += `Semana ${week}/12 | Fase: ${periodWeek.phase} | RPE ${periodWeek.rpe}`;
+        if (periodWeek.deload) r += ' (deload)';
+        r += '\n';
+        r += todayWorkout ? 'Ya entrenaste hoy.' : 'Aun no entrenas hoy.';
+        r += `\n\nPuedo ayudarte con entrenamiento, nutricion, suplementacion, lesiones, recuperacion, o cualquier duda de fitness. Pregunta lo que necesites.`;
+        return r;
+    },
+
+    genThanks(profile) {
+        const responses = [
+            `De nada. Si te surge otra duda, aqui estoy. Ahora a darle.`,
+            `Para eso estoy. Consistencia > perfeccion. Sigue asi.`,
+            `Me alegra ayudar. Tu pon el esfuerzo, yo la guia. Cualquier cosa, pregunta.`
+        ];
+        return responses[Math.floor(Math.random() * responses.length)];
+    },
+
+    genWeightManagement(input, profile) {
+        const m = this.getUserMetrics(profile);
+        let r = `**Sobre tu peso (${m.w}kg)**\n\n`;
+        r += `**Importante:**\n• El peso fluctua 1-3kg/dia (agua, comida, sodio)\n• Pesate 3x/semana en ayunas, saca promedio semanal\n• Solo el promedio semanal importa\n\n`;
+        if (input.includes('subir') || input.includes('ganar') || input.includes('engordar')) {
+            r += `**Para subir de peso (musculo):**\n• Come ${Math.round(m.tdee+300)} kcal/dia (+300 sobre TDEE)\n• Proteina: ${Math.round(m.w*2)}g/dia\n• Objetivo: +0.25-0.5kg/semana\n• Si subes mas rapido = mucha grasa\n• Entrena pesado, progresa en pesos`;
+        } else {
+            r += `**Para bajar de peso (grasa):**\n• Come ${Math.round(m.tdee-400)} kcal/dia (-400 bajo TDEE)\n• Proteina: ${Math.round(m.w*2.2)}g/dia (preservar musculo)\n• Objetivo: -0.5 a 1kg/semana\n• Si bajas mas rapido = perderas musculo\n• NO dejes de entrenar pesado`;
+        }
+        r += `\n\n**Despues de dia libre:** +1-3kg es AGUA (se va en 2-3 dias). No entres en panico.`;
+        return r;
+    },
+
+    genFlexibility(input, profile) {
+        return `**Movilidad y Flexibilidad**\n\nLa movilidad mejora rendimiento y previene lesiones.\n\n**Rutina diaria (10 min):**\n• Cat-cow: 10 reps\n• World's greatest stretch: 5/lado\n• Hip 90/90: 30s/lado\n• Shoulder dislocations con palo: 10 reps\n• Deep squat hold: 30-60s\n• Pigeon stretch: 30s/lado\n\n**Cuando hacerla:**\n• Pre-entreno: movilidad DINAMICA (no estirar estatico)\n• Post-entreno o noche: estiramientos ESTATICOS (30-60s)\n\n**Para sentadilla profunda:** trabaja movilidad de tobillo (rodilla sobre punta del pie en pared) y cadera (90/90, pigeon).\n\nLa flexibilidad mejora en semanas si eres consistente. 5-10 min/dia es suficiente.`;
+    },
+
+    genBeginnerGuide(profile) {
+        const w = profile.weight || 70;
+        return `**Guia para Empezar**\n\nLos principiantes tienen la mejor ventaja: "noob gains". Tu cuerpo cambiara mas rapido que nunca.\n\n**Plan primeras 4 semanas:**\n\n1. **Frecuencia:** 3 dias/semana (L-M-V)\n2. **Rutina:** Full Body\n3. **Ejercicios basicos:**\n   • Sentadilla (piernas)\n   • Press banca (pecho)\n   • Remo barra (espalda)\n   • Press militar (hombros)\n   • Curl biceps + Pushdown triceps\n\n4. **Nutricion simple:**\n   • ${Math.round(w*30)} kcal/dia\n   • ${Math.round(w*1.8)}g proteina/dia\n   • Verduras en cada comida\n\n5. **Reglas:**\n   • Tecnica > Peso (siempre)\n   • Progresa +2.5kg/semana en basicos\n   • Nunca faltes 2 dias seguidos\n   • Duerme 7-9 horas\n\nDime "creame una rutina" y te genero una perfecta para empezar.`;
+    },
+
+    genAlcohol(profile) {
+        return `**Alcohol y Fitness**\n\nRealidad:\n• Reduce sintesis proteica 20-30%\n• Baja testosterona 24-72h\n• Son calorias vacias (7kcal/g)\n• Empeora calidad de sueno\n\n**Reglas si vas a tomar:**\n1. Maximo 1-2 tragos, 1-2 veces/semana\n2. Nunca el dia de entreno ni antes de piernas\n3. Come proteina antes y despues\n4. 1 vaso agua por cada trago\n\n**Menos malas opciones:** vodka + soda, vino tinto, cerveza light\n**Peores:** cocteles dulces (300-500kcal cada uno)\n\nSi estas en un cut serio: 0 alcohol por 8-12 semanas acelera mucho los resultados.`;
+    },
+
+    genSleep(profile) {
+        return `**Optimizar el Sueno**\n\nEl sueno es donde tu cuerpo crece. Con <6h pierdes 60% de capacidad de sintesis proteica.\n\n**Protocolo:**\n• Duracion: 7-9h (sin negociar)\n• Consistencia: misma hora ±30min todos los dias\n• Ambiente: oscuro total, 18-20C, silencio\n• Pre-sueno: sin pantallas 45min antes\n• No cafeina despues de las 14:00\n\n**Suplementos para sueno:**\n• Magnesio glicinato: 400mg (relajacion)\n• Ashwagandha: 600mg (reduce cortisol)\n• Glicina: 3g (calidad de sueno)\n• Melatonina: 0.5-1mg solo si viajas o cambias horario\n\n**Tips:**\n• Rutina nocturna: ducha caliente, leer, respiracion\n• Exposicion a luz solar por la manana (regula ritmo circadiano)\n• Ejercicio mejora sueno pero no entrenar <2h antes de dormir`;
+    },
+
+    genStress(profile) {
+        return `**Fitness y Salud Mental**\n\nEl ejercicio es uno de los mejores antidepresivos naturales. La ciencia es clara:\n\n**Beneficios comprobados:**\n• Libera endorfinas\n• Reduce cortisol 30-40%\n• Mejora calidad de sueno\n• Aumenta autoestima y confianza\n• Da estructura y proposito\n\n**Recomendaciones:**\n1. Entrena aunque no tengas ganas (la regla de 5 min)\n2. Prioriza pesas sobre cardio (mas impacto en autoestima)\n3. Duerme 7-9h (sin sueno todo empeora)\n4. Camina 20-30min al aire libre (luz solar = serotonina)\n5. Come bien (nutricion afecta mucho el animo)\n\nEl gym transforma tu cuerpo Y tu mente.\n\n*Si necesitas ayuda profesional, no dudes en buscar un psicologo. El gym complementa, no reemplaza la terapia.*`;
+    },
+
+    genHydration(profile) {
+        const w = profile.weight || 70;
+        return `**Hidratacion (${w}kg)**\n\n• Minimo diario: ${Math.round(w*0.035)}L (${Math.round(w*35)}ml)\n• Dias de entreno: +500ml-1L extra\n• Si sudas mucho: +1L adicional\n\n**Senales de deshidratacion:**\n• Orina amarilla oscura\n• Fatiga durante entreno\n• Dolor de cabeza\n• Calambres\n\n**Tips:**\n• 500ml al despertar\n• Botella en el gym siempre\n• Bebe antes de sentir sed\n• Electrolitos si entrenas >90min\n\nUn 2% de deshidratacion = -10% de fuerza. Bebe agua.`;
+    },
+
+
+    genMyths(input) {
+        const myths = [
+            { q: 'sudar', a: 'Sudar NO significa quemar grasa. El sudor es termorregulacion.' },
+            { q: 'mujer', a: 'Las mujeres NO se ponen enormes con pesas. No tienen suficiente testosterona.' },
+            { q: 'comer noche', a: 'Comer de noche NO engorda. Lo que importa es el total calorico del dia.' },
+            { q: 'cada 3 hora', a: 'NO necesitas comer cada 3 horas. El total diario de proteina importa mas que la frecuencia.' },
+            { q: 'cardio musculo', a: 'El cardio moderado NO quema musculo. Solo el excesivo sin proteina adecuada.' },
+            { q: 'abs cocina', a: 'VERDAD. Los abdominales se revelan con bajo % grasa (dieta), se construyen con entreno.' },
+            { q: 'creatina', a: 'La creatina NO es peligrosa. Es el suplemento mas estudiado y seguro de la historia.' },
+            { q: 'fallo', a: 'NO necesitas ir al fallo cada serie. 1-3 RIR produce ~90% del estimulo con menos fatiga.' },
+            { q: 'ventana anabolica', a: 'La "ventana anabolica" de 30min es un MITO. Tienes 4-6 horas post-entreno para comer.' },
+            { q: 'tonificar', a: '"Tonificar" no existe como concepto. Es ganar musculo + perder grasa. No hay entreno especial para eso.' },
+            { q: 'grasa localizada', a: 'NO puedes quemar grasa localizada. El cuerpo pierde grasa de forma general, no donde quieres.' },
+            { q: 'pesa', a: 'Las pesas NO te hacen lento ni rigido. Los atletas mas explosivos entrenan con pesas.' }
+        ];
+
+        // Find matching myth
+        const match = myths.find(m => input.includes(m.q));
+        if (match) {
+            return `**Respuesta basada en evidencia:**\n\n${match.a}\n\nLa ciencia del fitness es clara en este punto. Si tienes otra duda, pregunta.`;
+        }
+
+        let r = `**Mitos Comunes del Fitness (la verdad):**\n\n`;
+        myths.slice(0, 8).forEach(m => { r += `• ${m.a}\n\n`; });
+        r += `Preguntame sobre cualquier mito especifico y te digo que dice la ciencia.`;
+        return r;
+    },
+
+    genHormones(input, profile) {
+        if (input.includes('testosterona')) {
+            return `**Testosterona Natural**\n\n**Como optimizarla (sin sustancias):**\n1. Duerme 7-9h (la T se produce durante el sueno profundo)\n2. Entrena pesado (compound lifts: squat, deadlift, bench)\n3. Come suficiente grasa (0.8-1g/kg, especialmente monoinsaturada)\n4. Mantiene bajo tu % grasa (15-20% es optimo)\n5. Reduce estres cronico (cortisol mata testosterona)\n6. Vitamina D: 2000-4000 IU/dia\n7. Zinc: 15-30mg/dia\n8. Evita alcohol excesivo\n\n**Lo que NO funciona:** boosters de testosterona de suplementos (tribulus, etc). No tienen efecto significativo.\n\n*Si sospechas hipogonadismo, hazte analitica de sangre con tu medico.*`;
+        }
+        return `**Hormonas y Fitness**\n\n**Hormonas clave:**\n• **Testosterona:** musculo, fuerza, libido. Optimizar con sueno + pesas + grasa dietaria\n• **Cortisol:** estres, catabolismo. Reducir con sueno + descanso + no sobreentrenar\n• **Insulina:** nutrientes a las celulas. Manejar con timing de carbos post-entreno\n• **Hormona de crecimiento:** recuperacion, quema de grasa. Picos durante sueno profundo\n\n**Para optimizar todo:** Duerme bien, entrena pesado, come suficiente, maneja el estres.\n\nPreguntame sobre alguna hormona especifica si quieres mas detalle.`;
+    },
+
+    genAging(input, profile) {
+        return `**Entrenamiento Segun Edad**\n\n**Despues de los 40:**\n• Calentamiento mas largo (10-15min)\n• Prioriza movilidad articular\n• Pesas siguen siendo ESENCIALES (previenen sarcopenia)\n• Baja la intensidad maxima (RPE 7-8 vs 9-10)\n• Mas volumen moderado, menos peso extremo\n• Recuperacion mas lenta: descansa mas entre sesiones\n• Proteina mas alta: 2.2-2.4g/kg\n\n**Despues de los 50:**\n• Incluye trabajo de equilibrio\n• Ejercicios unilaterales para prevenir asimetrias\n• Cardio para salud cardiovascular (150min/semana)\n• Suplementa: Vitamina D, Omega-3, Creatina (todos con evidencia)\n\n**La verdad:** puedes construir musculo a CUALQUIER edad. Es mas lento pero posible. Y los beneficios para salud son aun mas importantes.\n\nNunca es tarde para empezar.`;
+    },
+
+    genWomensFitness(input, profile) {
+        const w = profile.weight || 60;
+        if (input.includes('embarazo')) {
+            return `**Ejercicio en Embarazo**\n\n*Consulta SIEMPRE con tu ginecologo antes.*\n\n**General (si no hay contraindicaciones):**\n• El ejercicio moderado es BENEFICIOSO durante el embarazo\n• Evita: contacto, caidas, acostada boca arriba (2do-3er trimestre)\n• Si: caminar, nadar, pesas moderadas, yoga prenatal\n• Escucha tu cuerpo: si algo no se siente bien, para\n• Hidratacion extra, no sobrecalentarse\n• Intensidad: poder hablar durante el ejercicio`;
+        }
+        return `**Fitness Femenino**\n\n**Verdades:**\n• Las pesas NO te haran enorme (no tienes testosterona suficiente)\n• Las pesas SI te daran forma, definicion y "tono"\n• El mejor entreno para mujeres es IGUAL que para hombres: compound + progresion\n\n**Consideraciones del ciclo:**\n• Fase folicular (dia 1-14): mas energia y fuerza. Entrena pesado.\n• Fase lutea (dia 15-28): puede haber mas fatiga. Ajusta si necesitas.\n• No es excusa para no entrenar, pero ajusta intensidad segun como te sientas\n\n**Nutricion:**\n• Calorias: ${Math.round(w*28)} kcal/dia aprox (ajustar segun objetivo)\n• Proteina: ${Math.round(w*2)}g/dia\n• Hierro: importante, especialmente si menstruas mucho\n\n**Prioridades esteticas comunes:**\n• Gluteos: hip thrust, bulgara, RDL\n• Core: planks, pallof press, dead bugs\n• Hombros: laterales para forma`;
+    },
+
+    genHomeWorkout(input, profile) {
+        return `**Entrenamiento en Casa (sin equipo)**\n\n**Rutina Full Body (3x/semana):**\n\n**1. Push-ups** (o en rodillas)\n4 series x max reps | Pecho, hombros, triceps\n\n**2. Sentadilla bulgara** (pie en silla)\n3 series x 12/pierna | Cuadriceps, gluteos\n\n**3. Remo invertido** (debajo de mesa)\n4 series x 10-15 | Espalda\n\n**4. Hip thrust** (espalda en sofa)\n3 series x 15-20 | Gluteos\n\n**5. Pike push-ups** (pies elevados)\n3 series x 8-12 | Hombros\n\n**6. Plancha**\n3 series x 30-60s | Core\n\n**Progresion sin peso:**\n• Mas reps\n• Mas series\n• Tempo mas lento (3s bajada)\n• Variaciones mas dificiles\n• Mochila con libros para carga\n\n**Limitacion:** sin equipo es dificil progresar en espalda y piernas mas alla de cierto punto. Invierte en bandas de resistencia o mancuernas ajustables si puedes.`;
+    },
+
+    genFrequency(input, profile) {
+        return `**Frecuencia y Timing**\n\n**Mejor hora para entrenar:**\n• Manana (6-10): testosterona mas alta, menos gente\n• Tarde (15-19): pico de fuerza, reflejos mejores\n• Noche (20-22): puede afectar sueno\n• **La mejor hora = la que puedas ser CONSISTENTE**\n\n**Cuantos dias:**\n• 3 dias: Full Body (frecuencia 3x/musculo)\n• 4 dias: Upper/Lower (frecuencia 2x/musculo)\n• 5 dias: PPL o Bro Split (alto volumen)\n• 6 dias: PPL x2 (volumen + frecuencia maxima)\n\n**Duracion por sesion:** 45-75 min (mas no es mejor)\n\n**Descanso entre sesiones:** minimo 48h para el mismo musculo\n\n**Para ver resultados:** minimo 4-6 semanas de consistencia\n\n**Regla:** La consistencia importa mas que el programa perfecto. El mejor programa es el que SIGUES.`;
+    },
+
+
+    // ===== SMART DEFAULT RESPONSE =====
+    genSmartDefault(prompt, input, profile, periodWeek) {
+        const w = profile.weight || 70;
+        const week = Storage.getCurrentWeek();
+
+        // Try to give a helpful response based on keywords present
+        if (input.includes('cuanto') || input.includes('cuanta') || input.includes('cuantos')) {
+            // Quantitative questions
+            if (input.includes('proteina')) return `Necesitas **${Math.round(w*2)}g de proteina/dia** (2g/kg). Distribuida en 4-5 comidas. Fuentes: pollo, pescado, huevos, whey, yogur griego.`;
+            if (input.includes('agua')) return this.genHydration(profile);
+            if (input.includes('caloria')) return `Tu TDEE estimado: **${this.getUserMetrics(profile).tdee} kcal**. ${profile.goal&&profile.goal.includes('perder')?'Para perder grasa: '+Math.round(this.getUserMetrics(profile).tdee-400)+' kcal':'Para ganar musculo: '+Math.round(this.getUserMetrics(profile).tdee+300)+' kcal'}.`;
+            if (input.includes('peso') || input.includes('levantar')) return `Usa un peso que te permita completar las reps con buena tecnica a RPE ${periodWeek.rpe} (${10-periodWeek.rpe} reps en reserva).`;
+        }
+
+        if (input.includes('que es') || input.includes('que son') || input.includes('que significa')) {
+            // Definitional questions
+            if (input.includes('rpe')) return `**RPE (Rating of Perceived Exertion):** escala de esfuerzo del 1-10. RPE 10 = fallo muscular. RPE 8 = te quedan 2 reps. Tu RPE actual: ${periodWeek.rpe}.`;
+            if (input.includes('rir')) return `**RIR (Reps In Reserve):** repeticiones que te quedan en el tanque. RIR 2 = podrias hacer 2 reps mas. Es lo opuesto al RPE. RIR 2 = RPE 8.`;
+            if (input.includes('deload')) return `**Deload:** semana de descarga. Reduces peso al 50-60% y volumen a la mitad. Permite que tu cuerpo se recupere de la fatiga acumulada. Se hace cada 4-6 semanas.`;
+            if (input.includes('hipertrofia')) return `**Hipertrofia:** crecimiento muscular. Se logra con: tension mecanica (peso suficiente), volumen adecuado (10-20 series/semana), progresion (hacer mas cada vez) y recovery (sueno + comida).`;
+            if (input.includes('tdee')) return `**TDEE (Total Daily Energy Expenditure):** calorias totales que quemas al dia incluyendo ejercicio. El tuyo: ~${this.getUserMetrics(profile).tdee} kcal. Come por encima para ganar, por debajo para perder.`;
+            if (input.includes('compound') || input.includes('compuesto')) return `**Ejercicio compuesto:** mueve multiples articulaciones y musculos (sentadilla, press banca, peso muerto). Son la BASE de cualquier programa. Mas eficientes y permiten mas carga.`;
+            if (input.includes('superavit')) return `**Superavit calorico:** comer MAS de lo que gastas. Necesario para ganar musculo. Recomendado: +200-350 kcal sobre TDEE. Para ti: ~${Math.round(this.getUserMetrics(profile).tdee+300)} kcal/dia.`;
+            if (input.includes('deficit')) return `**Deficit calorico:** comer MENOS de lo que gastas. Necesario para perder grasa. Recomendado: -300-500 kcal bajo TDEE. Para ti: ~${Math.round(this.getUserMetrics(profile).tdee-400)} kcal/dia.`;
+        }
+
+        if (input.includes('puedo') || input.includes('debo') || input.includes('es bueno') || input.includes('esta bien')) {
+            // Permission/advice questions
+            if (input.includes('entrenar todos')) return `Entrenar todos los dias NO es necesario ni optimo. Los musculos crecen durante el DESCANSO. ${profile.daysPerWeek||4} dias de pesas + descanso activo (caminar) el resto es ideal.`;
+            if (input.includes('saltarme') || input.includes('saltar')) return `Un dia saltado no arruina nada. Lo que arruina es la tendencia. Si faltas hoy, asegurate de ir manana. Nunca 2 faltas seguidas.`;
+            if (input.includes('enfermo') || input.includes('gripado') || input.includes('resfri')) return `**Si estas enfermo:**\n• Sintomas cuello arriba (nariz, garganta): puedes entrenar suave\n• Sintomas cuello abajo (pecho, fiebre, cuerpo): DESCANSA\n• Cuando vuelvas: 2-3 sesiones al 70% antes de retomar normal`;
+        }
+
+        // Catch-all intelligent response
+        let r = `**Sobre tu pregunta:**\n\n"${prompt}"\n\n`;
+        r += `Puedo ayudarte con:\n• Rutinas y ejercicios personalizados\n• Nutricion, macros y planes de comida\n• Suplementacion basada en evidencia\n• Lesiones, dolor y recuperacion\n• Progresion, estancamientos, ciencia del entrenamiento\n• Objetivos con timeline realista\n• Motivacion y habitos\n\n`;
+        r += `Prueba preguntar algo como:\n• "Que entreno hoy?"\n• "Cuanta proteina necesito?"\n• "Como eliminar grasa abdominal?"\n• "Es mejor cardio o pesas?"\n• "Creame una rutina nueva"`;
+        return r;
+    },
+
+    // ===== LOCAL IMAGE ANALYSIS =====
+    localImageAnalysis() {
+        const profile = Storage.getProfile();
+        const m = this.getUserMetrics(profile);
+        const week = Storage.getCurrentWeek();
+        let estimatedBF = m.g === 'mujer' ? (1.20*parseFloat(m.bmi))+(0.23*m.a)-5.4 : (1.20*parseFloat(m.bmi))+(0.23*m.a)-16.2;
+        estimatedBF = Math.max(5, Math.min(45, estimatedBF)).toFixed(0);
+
+        let r = `**Valoracion Basada en tu Perfil**\n\n`;
+        r += `${m.w}kg | ${m.h}cm | IMC: ${m.bmi} | Grasa estimada: ~${estimatedBF}%\n\n---\n\n`;
+        
+        if (estimatedBF < 15) {
+            r += `**Estado:** Atletico/definido. Los musculos se ven con buena separacion.\n\n**Recomendacion:** Lean bulk controlado (+250kcal). Enfocate en musculos rezagados para simetria.\n`;
+        } else if (estimatedBF < 20) {
+            r += `**Estado:** Buena base muscular con capa de grasa moderada.\n\n**Recomendacion:** Deficit de -400kcal con proteina alta (${Math.round(m.w*2.2)}g). En 8-12 semanas revelaras el musculo que ya tienes.\n`;
+        } else {
+            r += `**Estado:** La grasa esta tapando el musculo. La solucion es nutricional.\n\n**Recomendacion:** Deficit de -500kcal: ${Math.round(m.w*24)} kcal/dia. Proteina: ${Math.round(m.w*2.2)}g. Entrena pesado para preservar musculo. Cardio: 10.000 pasos/dia.\n`;
+        }
+
+        r += `\n**Timeline:**\n• Semana 3-4: ropa queda diferente\n• Semana 5-8: tu notas el cambio\n• Semana 9-12: los demas notan el cambio\n\n`;
+        r += `Toma fotos cada 2 semanas con la misma luz y pose para comparar progreso real.`;
+        return r;
+    },
+
+    // ===== ROUTINE GENERATOR =====
+    generateCustomRoutine(profile) {
+        const days = profile.daysPerWeek || 4;
+        let templateKey = days <= 3 ? 'fullBody' : days === 4 ? 'upperLower' : days === 5 ? 'bro' : 'ppl';
         const template = ROUTINE_TEMPLATES[templateKey];
         const week = Storage.getCurrentWeek();
         const periodWeek = PERIODIZATION.weeks[week - 1] || PERIODIZATION.weeks[0];
@@ -2021,20 +982,14 @@ ${measurements.length > 0 ? `\n📏 Tu último registro de peso: ${measurements[
         return {
             id: 'ai-generated-' + Date.now(),
             name: template.name + ' (IA)',
-            description: `Generada por IA - Semana ${week} - ${periodWeek.phase}. Programa de 12 semanas con periodización ondulante.`,
+            description: `Generada por IA - Semana ${week} - ${periodWeek.phase}`,
             template: templateKey,
             days: template.days.map(day => ({
                 name: day.name,
                 exercises: day.exercises.map(exId => {
                     const exercise = EXERCISES_DB.find(e => e.id === exId);
                     if (!exercise) return exId;
-                    return {
-                        ...exercise,
-                        targetSets: exercise.sets,
-                        targetReps: exercise.reps,
-                        intensity: periodWeek.intensity,
-                        rpe: periodWeek.rpe
-                    };
+                    return { ...exercise, targetSets: exercise.sets, targetReps: exercise.reps, intensity: periodWeek.intensity, rpe: periodWeek.rpe };
                 })
             })),
             weekCreated: week,
