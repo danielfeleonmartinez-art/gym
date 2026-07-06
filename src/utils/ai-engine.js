@@ -1,8 +1,6 @@
 // ===== AI ENGINE v5.0 - Intelligent Local + Optional API =====
 const AIEngine = {
-    ENDPOINTS: [
-        'https://openrouter.ai/api/v1/chat/completions'
-    ],
+    ENDPOINTS: [],
 
     getApiKey() { 
         return localStorage.getItem('fitai_api_key') || this.defaultKey(); 
@@ -62,54 +60,43 @@ const AIEngine = {
         history.forEach(m => messages.push({role: m.role==='ai'?'assistant':'user', content:m.content}));
         messages.push({role:'user',content:prompt});
 
-        try {
-            const r = await fetch(this.ENDPOINTS[0], {
-                method:'POST',
-                headers:{
-                    'Content-Type':'application/json',
-                    'Authorization': 'Bearer ' + key,
-                    'HTTP-Referer': window.location.href,
-                    'X-Title': 'FitAI Coach'
-                },
-                body: JSON.stringify({
-                    model: 'google/gemma-4-31b-it:free',
-                    messages,
-                    max_tokens: 2048,
-                    temperature: 0.7
-                })
-            });
-            if (!r.ok) {
-                // Try another free model
-                const r2 = await fetch(this.ENDPOINTS[0], {
+        const models = ['google/gemma-4-31b-it:free','meta-llama/llama-4-maverick:free','nousresearch/deephermes-3-llama-3-8b-preview:free','qwen/qwen3-8b:free'];
+
+        for (const model of models) {
+            try {
+                const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
                     method:'POST',
                     headers:{
                         'Content-Type':'application/json',
                         'Authorization': 'Bearer ' + key,
-                        'HTTP-Referer': window.location.href,
-                        'X-Title': 'FitAI Coach'
+                        'HTTP-Referer': window.location.origin || 'https://danielfeleonmartinez-art.github.io',
+                        'X-Title': 'FitAI'
                     },
-                    body: JSON.stringify({
-                        model: 'meta-llama/llama-4-maverick:free',
-                        messages,
-                        max_tokens: 2048,
-                        temperature: 0.7
-                    })
+                    body: JSON.stringify({ model, messages, max_tokens: 2048, temperature: 0.7 })
                 });
-                if (!r2.ok) return null;
-                const data2 = await r2.json();
-                if (data2.choices && data2.choices[0]) {
-                    let text = data2.choices[0].message.content;
-                    return text.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FAFF}]/gu,'').trim();
+
+                if (!r.ok) {
+                    const err = await r.text().catch(()=>'');
+                    console.log('Model ' + model + ' failed:', r.status, err);
+                    continue;
                 }
-                return null;
+
+                const data = await r.json();
+                if (data.choices && data.choices[0] && data.choices[0].message) {
+                    let text = data.choices[0].message.content;
+                    text = text.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FAFF}]/gu,'');
+                    return text.trim();
+                }
+                if (data.error) {
+                    console.log('Model ' + model + ' error:', data.error);
+                    continue;
+                }
+            } catch(e) {
+                console.log('Model ' + model + ' exception:', e.message);
+                continue;
             }
-            const data = await r.json();
-            if (data.choices && data.choices[0]) {
-                let text = data.choices[0].message.content;
-                return text.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FAFF}]/gu,'').trim();
-            }
-            return null;
-        } catch(e) { return null; }
+        }
+        return null;
     },
 
 
