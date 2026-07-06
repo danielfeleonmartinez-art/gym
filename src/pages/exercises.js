@@ -143,12 +143,35 @@ const ExercisesPage = {
             </div>
 
             ${pr ? `
-                <div class="card mb-2" style="border-color: var(--warning); text-align: center;">
-                    <span style="font-size: 1.2rem;">🏆</span>
-                    <span style="font-weight: 700; color: var(--warning);"> PR: ${pr.weight}kg</span>
-                    <span class="text-muted" style="font-size: 0.75rem;"> (${Helpers.formatDate(pr.date)})</span>
+                <div class="card mb-2" style="border-color: var(--primary);">
+                    <h3 class="card-title mb-1">Tu Progresion</h3>
+                    <div class="grid-2 gap-1">
+                        <div class="stat-card">
+                            <div class="stat-value" style="color:var(--primary)">${pr.weight}kg</div>
+                            <div class="stat-label">PR actual</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" style="color:var(--success)">${pr.weight + 2.5}kg</div>
+                            <div class="stat-label">Proximo objetivo</div>
+                        </div>
+                    </div>
+                    <div style="margin-top:0.6rem;font-size:0.72rem;color:var(--text-muted)">
+                        <p>Peso de trabajo sugerido: <strong>${Math.round(pr.weight * 0.8)}kg</strong> (80% de PR)</p>
+                        <p>Ultimo PR: ${Helpers.formatDate(pr.date)}</p>
+                        <p>Sobrecarga: +2.5kg cuando completes todas las reps con buena tecnica</p>
+                    </div>
                 </div>
-            ` : ''}
+            ` : `
+                <div class="card mb-2" style="border-color: var(--border);">
+                    <h3 class="card-title mb-1">Peso Recomendado</h3>
+                    <p style="font-size:0.78rem;color:var(--text-secondary)">
+                        Sin PR registrado. Peso sugerido para empezar: <strong>~${Math.round((Storage.getProfile().weight||70) * (ex.category==='compound'?0.5:0.2))}kg</strong>
+                    </p>
+                    <p style="font-size:0.7rem;color:var(--text-muted);margin-top:0.3rem">
+                        Progresion: empieza ligero, sube 2.5kg/semana en compuestos, 1-2kg en aislamientos
+                    </p>
+                </div>
+            `}
 
             <div class="card mb-2">
                 <h3 class="card-title mb-1">📋 Descripción</h3>
@@ -192,7 +215,19 @@ const ExercisesPage = {
                     <p style="margin-top: 0.3rem;"><strong>Músculo principal:</strong> ${ex.muscle}</p>
                 </div>
             </div>
+
+            <button class="btn btn-primary btn-full mt-2" onclick="ExercisesPage.askAI()">Preguntar a la IA sobre este ejercicio</button>
         </div>`;
+    },
+
+    askAI() {
+        const ex = this.selectedExercise;
+        if (!ex) return;
+        const msg = `Explicame en detalle el ejercicio "${ex.name}": tecnica paso a paso, musculos involucrados, errores comunes, variantes, y como incluirlo en mi rutina. Mi nivel es ${Storage.getProfile().level||'intermedio'} y peso ${Storage.getProfile().weight||70}kg.`;
+        Storage.addChatMessage({ role: 'user', content: msg });
+        this.selectedExercise = null;
+        App.navigate('ai-coach');
+        setTimeout(() => AICoachPage.sendMessage(), 100);
     },
 
     setFilter(filter) {

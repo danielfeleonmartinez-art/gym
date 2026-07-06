@@ -129,7 +129,8 @@ const ScanPage = {
                 </div>
             </div>
 
-            <button class="btn btn-primary btn-full" onclick="ScanPage.generatePlan()">Generar rutina personalizada</button>
+            <button class="btn btn-primary btn-full" onclick="ScanPage.generatePlanWithAI()">Generar plan con IA</button>
+            <button class="btn btn-secondary btn-full mt-1" onclick="ScanPage.generatePlan()">Generar rutina rapida</button>
         </div>`;
     },
 
@@ -259,6 +260,24 @@ const ScanPage = {
         };
 
         App.renderCurrentPage();
+    },
+
+    async generatePlanWithAI() {
+        const d = AIEngine.getUserData();
+        const weakMuscles = this.scanResult ? this.scanResult.muscleRatings.filter(m => m.score < 55).map(m => m.name) : [];
+        const prompt = `Basandote en este perfil: ${d.w}kg, ${d.h}cm, ${d.a} anos, IMC ${d.bmi}, grasa ~${this.scanResult?this.scanResult.bodyFat:'20'}%, nivel ${d.p.level||'intermedio'}, objetivo ${d.p.goal||'ganar musculo'}, musculos debiles: ${weakMuscles.join(', ')||'ninguno identificado'}. Dame un plan de 4 semanas con: 1) Los 5 mejores ejercicios especificos para los musculos debiles con series, reps y peso sugerido basado en ${d.w}kg de peso corporal. 2) Nutricion diaria con calorias y macros. 3) Cardio recomendado. Se muy especifico con nombres de ejercicios reales.`;
+
+        try {
+            const result = await AIEngine.callGroq(prompt);
+            if (result) {
+                Storage.addChatMessage({ role: 'ai', content: result });
+                App.navigate('ai-coach');
+                return;
+            }
+        } catch(e) {}
+
+        // Fallback: generate routine directly
+        this.generatePlan();
     },
 
     generatePlan() {
