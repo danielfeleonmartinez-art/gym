@@ -274,10 +274,4 @@ const App = {
 };
 
 // Initialize app when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-    // Auto-configure API key if not set
-    if (!localStorage.getItem('gemini_api_key')) {
-        localStorage.setItem('gemini_api_key', atob('QVEuQWI4Uk42TF9GOFFnYXhheFJHclQtRW5jdkVDd3dvZVFKQm9uR2tHLTc1SklacnhHenc='));
-    }
-    App.init();
-});
+document.addEventListener('DOMContentLoaded', () => App.init());
