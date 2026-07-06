@@ -1,7 +1,18 @@
 // ===== AI ENGINE v4.0 - Google Gemini Powered =====
 const AIEngine = {
-    API_KEY: 'AIzaSyB8RN6L_F8QgaxaxRGrT-EncvECwwoeQJBonGkG-75JIZrxGzw',
-    API_URL: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+    // API key stored in localStorage - set via profile settings
+    getApiKey() {
+        return localStorage.getItem('gemini_api_key') || '';
+    },
+    setApiKey(key) {
+        localStorage.setItem('gemini_api_key', key);
+    },
+    ENDPOINTS: [
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+        'https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent',
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
+        'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent'
+    ],
 
     // Content filter - blocks inappropriate content
     isBlocked(text) {
@@ -134,7 +145,7 @@ ${periodWeek.deload ? '- NOTA: Esta en semana de DELOAD (debe reducir volumen e 
         return '**Sobre tu pregunta:**\n\n"' + prompt + '"\n\nPuedo ayudarte con:\n- Rutinas y ejercicios personalizados\n- Nutricion, macros y planes de comida\n- Suplementacion\n- Lesiones y recuperacion\n- Progresion y estancamientos\n- Objetivos con timeline\n\nPrueba con: "Que entreno hoy?", "Dame mi plan nutricional", "Creame una rutina nueva"';
     },
 
-    // Call Google Gemini API
+    // Call Google Gemini API - tries multiple endpoints
     async callGemini(prompt) {
         const userContext = this.buildUserContext();
         const chatHistory = Storage.getChatHistory().slice(-8);
@@ -149,7 +160,7 @@ REGLAS ESTRICTAS:
 3. Se directo, conciso y basado en evidencia cientifica
 4. Da numeros concretos siempre: peso, series, reps, kcal, gramos
 5. Personaliza TODO al perfil del usuario (usa sus datos arriba)
-6. Usa formato con ** para negritas y listas con viñetas cuando sea util
+6. Usa formato con ** para negritas y listas con vinetas cuando sea util
 7. Si preguntan algo completamente fuera de fitness/nutricion/salud, responde brevemente que solo manejas esos temas
 8. NUNCA respondas sobre contenido sexual, ilegal, violento o sustancias prohibidas
 9. Para calculos nutricionales usa Mifflin-St Jeor con los datos del usuario
@@ -157,7 +168,6 @@ REGLAS ESTRICTAS:
 11. Se honesto y directo - no des respuestas genericas
 12. Cuando des rutinas o planes, incluye ejercicios especificos con series, reps y pesos sugeridos basados en los PRs del usuario`;
 
-        // Build conversation history for context
         const contents = [];
         chatHistory.forEach(msg => {
             contents.push({
@@ -165,53 +175,59 @@ REGLAS ESTRICTAS:
                 parts: [{ text: msg.content }]
             });
         });
-        contents.push({
-            role: 'user',
-            parts: [{ text: prompt }]
+        contents.push({ role: 'user', parts: [{ text: prompt }] });
+
+        const body = JSON.stringify({
+            system_instruction: { parts: [{ text: systemInstruction }] },
+            contents: contents,
+            generationConfig: { temperature: 0.7, maxOutputTokens: 2048, topP: 0.9 },
+            safetySettings: [
+                { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+                { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+                { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_LOW_AND_ABOVE" },
+                { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" }
+            ]
         });
 
-        const response = await fetch(`${this.API_URL}?key=${this.API_KEY}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                system_instruction: {
-                    parts: [{ text: systemInstruction }]
-                },
-                contents: contents,
-                generationConfig: {
-                    temperature: 0.7,
-                    maxOutputTokens: 2048,
-                    topP: 0.9
-                },
-                safetySettings: [
-                    { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-                    { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-                    { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_LOW_AND_ABOVE" },
-                    { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" }
-                ]
-            })
-        });
+        // Try each endpoint until one works
+        let lastError = null;
+        const apiKey = this.getApiKey();
+        if (!apiKey) {
+            throw new Error('No API key configured');
+        }
+        for (const endpoint of this.ENDPOINTS) {
+            try {
+                const response = await fetch(`${endpoint}?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: body
+                });
 
-        if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            console.error('Gemini error:', response.status, errData);
-            throw new Error(`API error: ${response.status}`);
+                if (!response.ok) {
+                    lastError = new Error(`${endpoint}: HTTP ${response.status}`);
+                    continue;
+                }
+
+                const data = await response.json();
+
+                if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+                    let text = data.candidates[0].content.parts[0].text;
+                    text = text.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}]/gu, '');
+                    return text.trim();
+                }
+
+                if (data.candidates && data.candidates[0] && data.candidates[0].finishReason === 'SAFETY') {
+                    return 'No puedo responder a esa pregunta por razones de seguridad. Preguntame sobre entrenamiento, nutricion o salud fisica.';
+                }
+
+                lastError = new Error('No valid response');
+            } catch (err) {
+                lastError = err;
+                continue;
+            }
         }
 
-        const data = await response.json();
-
-        if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-            let text = data.candidates[0].content.parts[0].text;
-            // Strip any emojis that Gemini might include
-            text = text.replace(/[\u{1F600}-\u{1F64F}|\u{1F300}-\u{1F5FF}|\u{1F680}-\u{1F6FF}|\u{1F1E0}-\u{1F1FF}|\u{2600}-\u{26FF}|\u{2700}-\u{27BF}|\u{FE00}-\u{FE0F}|\u{1F900}-\u{1F9FF}|\u{1FA00}-\u{1FA6F}|\u{1FA70}-\u{1FAFF}|\u{200D}|\u{20E3}|\u{FE0F}]/gu, '');
-            return text.trim();
-        }
-
-        if (data.candidates && data.candidates[0] && data.candidates[0].finishReason === 'SAFETY') {
-            return 'No puedo responder a esa pregunta por razones de seguridad. Preguntame sobre entrenamiento, nutricion o salud fisica.';
-        }
-
-        throw new Error('No valid response from API');
+        throw lastError || new Error('All endpoints failed');
     },
 
     // Image analysis with Gemini Vision
@@ -224,7 +240,7 @@ REGLAS ESTRICTAS:
         const prompt = question || 'Analiza esta foto de mi fisico. Dame una valoracion completa: estimacion de porcentaje de grasa corporal, puntos fuertes musculares, areas que necesitan mas trabajo, simetria, y un plan de accion concreto de 4 semanas para mejorar. Se directo y honesto.';
 
         try {
-            const response = await fetch(`${this.API_URL}?key=${this.API_KEY}`, {
+            const response = await fetch(`${this.ENDPOINTS[0]}?key=${this.getApiKey()}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
