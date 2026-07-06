@@ -1,6 +1,6 @@
 // ===== AI ENGINE v4.0 - Google Gemini Powered =====
 const AIEngine = {
-    API_KEY: 'AIzaSyAb8RN6K6k_UaU4flQ1LpaPsFTp9WKd4kwlsvyVkNqnC7nChxjg',
+    API_KEY: 'AIzaSyB8RN6L_F8QgaxaxRGrT-EncvECwwoeQJBonGkG-75JIZrxGzw',
     API_URL: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
 
     // Content filter - blocks inappropriate content
@@ -68,8 +68,70 @@ ${periodWeek.deload ? '- NOTA: Esta en semana de DELOAD (debe reducir volumen e 
             return await this.callGemini(prompt);
         } catch (error) {
             console.error('Gemini API error:', error);
-            return 'Hubo un error al procesar tu pregunta. Intenta de nuevo en unos segundos.';
+            // Fallback to intelligent local response
+            return this.localFallback(prompt, lower);
         }
+    },
+
+    // Intelligent local fallback when API fails
+    localFallback(prompt, input) {
+        const profile = Storage.getProfile();
+        const w = profile.weight || 70;
+        const h = profile.height || 175;
+        const a = profile.age || 25;
+        const bmr = profile.gender === 'mujer' ? 10*w + 6.25*h - 5*a - 161 : 10*w + 6.25*h - 5*a + 5;
+        const tdee = Math.round(bmr * 1.55);
+        const week = Storage.getCurrentWeek();
+        const periodWeek = PERIODIZATION.weeks[week - 1] || PERIODIZATION.weeks[0];
+
+        // Try to match common topics
+        if (input.includes('entreno hoy') || input.includes('que hago hoy') || input.includes('entrenamiento')) {
+            const days = profile.daysPerWeek || 4;
+            let templateKey = days <= 3 ? 'fullBody' : days === 4 ? 'upperLower' : 'ppl';
+            const template = ROUTINE_TEMPLATES[templateKey];
+            const workoutsThisWeek = Storage.getWorkoutHistory().filter(wk => {
+                const d = new Date(wk.date); const now = new Date();
+                const monday = new Date(now); monday.setDate(now.getDate() - ((now.getDay() + 6) % 7)); monday.setHours(0,0,0,0);
+                return d >= monday;
+            }).length;
+            const dayIndex = workoutsThisWeek % template.days.length;
+            const todayPlan = template.days[dayIndex];
+            const prs = Storage.getPRs();
+            let r = '**Entrenamiento de Hoy: ' + todayPlan.name + '**\nSemana ' + week + '/12 | Fase: ' + periodWeek.phase + ' | RPE ' + periodWeek.rpe + '\n\n---\n';
+            todayPlan.exercises.forEach((exId, i) => {
+                const ex = EXERCISES_DB.find(e => e.id === exId);
+                if (!ex) return;
+                const pr = prs[exId];
+                const sugW = pr ? Math.round(pr.weight * (periodWeek.intensity / 100)) : null;
+                r += '\n**' + (i+1) + '. ' + ex.name + '**\n' + ex.sets + ' series x ' + ex.reps + (sugW ? ' | ~' + sugW + 'kg' : '') + ' | Descanso: ' + ex.rest + 's\n';
+            });
+            r += '\n---\n\nCalienta 5-10 min antes. Ultima serie cerca del fallo (RPE ' + periodWeek.rpe + ').';
+            return r;
+        }
+
+        if (input.includes('nutri') || input.includes('dieta') || input.includes('caloria') || input.includes('macro') || input.includes('comer')) {
+            const goal = profile.goal || 'ganar musculo';
+            let targetCals = goal.includes('perder') ? Math.round(tdee - 400) : Math.round(tdee + 300);
+            let protein = Math.round(w * 2.2);
+            let fats = Math.round(w * 0.9);
+            let carbs = Math.round((targetCals - protein*4 - fats*9) / 4);
+            return '**Plan Nutricional**\n' + w + 'kg | Objetivo: ' + goal + '\n\n---\n\n**Tus numeros:**\n- TDEE: ' + tdee + ' kcal\n- Objetivo: **' + targetCals + ' kcal/dia**\n\n**Macros:**\n- Proteina: **' + protein + 'g** (' + Math.round(protein*4/targetCals*100) + '%)\n- Carbohidratos: **' + carbs + 'g** (' + Math.round(carbs*4/targetCals*100) + '%)\n- Grasas: **' + fats + 'g** (' + Math.round(fats*9/targetCals*100) + '%)\n\n**Distribucion:**\n- Desayuno: ~' + Math.round(targetCals*0.25) + ' kcal\n- Almuerzo: ~' + Math.round(targetCals*0.30) + ' kcal\n- Pre-entreno: ~' + Math.round(targetCals*0.15) + ' kcal\n- Cena: ~' + Math.round(targetCals*0.20) + ' kcal\n- Snack: ~' + Math.round(targetCals*0.10) + ' kcal';
+        }
+
+        if (input.includes('suplement') || input.includes('creatina') || input.includes('whey')) {
+            return '**Suplementacion basada en evidencia**\n\n**Tier 1 (imprescindibles):**\n1. Creatina Monohidrato - 5g/dia siempre\n2. Proteina Whey - solo si no llegas a ' + Math.round(w*2) + 'g con comida\n3. Vitamina D3 - 2000-4000 IU/dia\n\n**Tier 2 (utiles):**\n4. Magnesio glicinato - 400mg antes de dormir\n5. Omega-3 - 2-3g/dia\n6. Cafeina - ' + Math.round(w*4) + 'mg pre-entreno\n\n**No malgastes en:** BCAAs, quemadores, boosters de testosterona.\n\nPrioridad: Sueno > Nutricion > Entreno > Suplementos';
+        }
+
+        if (input.includes('rutina') || input.includes('programa') || input.includes('plan')) {
+            return this.handleRoutineCreation();
+        }
+
+        if (input.includes('hola') || input.includes('buenas') || input.includes('que tal')) {
+            return 'Hola, ' + (profile.name || 'crack') + '. Semana ' + week + '/12, fase ' + periodWeek.phase + ', RPE ' + periodWeek.rpe + '. Preguntame lo que necesites sobre entrenamiento, nutricion o cualquier tema de fitness.';
+        }
+
+        // Generic fallback
+        return '**Sobre tu pregunta:**\n\n"' + prompt + '"\n\nPuedo ayudarte con:\n- Rutinas y ejercicios personalizados\n- Nutricion, macros y planes de comida\n- Suplementacion\n- Lesiones y recuperacion\n- Progresion y estancamientos\n- Objetivos con timeline\n\nPrueba con: "Que entreno hoy?", "Dame mi plan nutricional", "Creame una rutina nueva"';
     },
 
     // Call Google Gemini API
